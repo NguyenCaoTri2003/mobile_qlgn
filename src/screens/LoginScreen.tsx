@@ -87,20 +87,20 @@ export default function LoginScreen({ navigation }: any) {
     }
   };
 
-  const fillDemo = () => {
-    setEmail("giaonhan1@nhigia.vn");
-    setPassword("Abc@#123456");
-  };
+  // const fillDemo = () => {
+  //   setEmail("giaonhan1@nhigia.vn");
+  //   setPassword("Abc@#123456");
+  // };
 
-  const fillDemo2 = () => {
-    setEmail("giaonhan2@nhigia.vn");
-    setPassword("Abc@#123456");
-  };
+  // const fillDemo2 = () => {
+  //   setEmail("giaonhan2@nhigia.vn");
+  //   setPassword("Abc@#123456");
+  // };
 
-  const fillTP = () => {
-    setEmail("truonggiaonhan@nhigia.vn");
-    setPassword("Abc@#123456");
-  };
+  // const fillTP = () => {
+  //   setEmail("truonggiaonhan@nhigia.vn");
+  //   setPassword("Abc@#123456");
+  // };
 
   return (
     <KeyboardAvoidingView
@@ -158,7 +158,7 @@ export default function LoginScreen({ navigation }: any) {
                 </TouchableOpacity>
               </View>
               
-              <View
+              {/* <View
                 style={{
                   flexDirection: "row",
                   justifyContent: "space-between",
@@ -176,7 +176,7 @@ export default function LoginScreen({ navigation }: any) {
                 <TouchableOpacity style={styles.demoBtn} onPress={fillTP}>
                   <Text style={styles.demoText}>Trưởng phòng</Text>
                 </TouchableOpacity>
-              </View>
+              </View> */}
 
               {/* LOGIN BUTTON */}
               <TouchableOpacity
@@ -191,7 +191,7 @@ export default function LoginScreen({ navigation }: any) {
                 )}
               </TouchableOpacity>
             </View>
-            <Text style={styles.version}>Phiên bản hiện tại 2.0.2</Text>
+            <Text style={styles.version}>Phiên bản hiện tại 2.0.3</Text>
           </View>
         </ScrollView>
       </TouchableWithoutFeedback>
