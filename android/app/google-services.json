@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "320154475046",
+    "project_id": "logistics-a9284",
+    "storage_bucket": "logistics-a9284.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:320154475046:android:5c41b203a4e2e29a1564e7",
+        "android_client_info": {
+          "package_name": "com.nhigia.logistics"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAZewRzxcxrP2FMWjZC5QfC-1qH8APpC5I"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

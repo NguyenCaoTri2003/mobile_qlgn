@@ -1,0 +1,38 @@
+{
+  "expo": {
+    "name": "Nhị Gia Logistics",
+    "slug": "nhi-gia-logistics",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/logo/app-icon-1024.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/images/logo/app-icon-1024.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "googleServicesFile": "./google-services.json",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/logo/app-icon-1024.png",
+        "backgroundColor": "#E6F4FE"
+      },
+      "predictiveBackGestureEnabled": false,
+      "package": "com.nhigia.logistics"
+    },
+    "web": {
+      "favicon": "./assets/images/logo/favicon.png"
+    },
+    "plugins": [
+      "expo-sharing"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "f13b2926-a536-4ed1-bbe5-ee852733647e"
+      }
+    }
+  }
+}
