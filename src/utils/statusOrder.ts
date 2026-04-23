@@ -30,6 +30,12 @@ export function statusColor(status: string) {
     case "RETURNED_PERSONAL":
       return { backgroundColor: "#e5e7eb" };
 
+    case "RETURNED_PERSONAL":
+      return { backgroundColor: "#e5e7eb" };
+
+    case "ARCHIVED":
+      return { backgroundColor: "#e5e7eb" };
+
     default:
       return { backgroundColor: "#e5e7eb" };
   }
@@ -66,6 +72,9 @@ export function statusTextColor(status: string) {
 
     case "RETURNED_PERSONAL":
       return { color: "#374151" };
+    
+    case "ARCHIVED":
+      return { color: "#21252b" };
 
     default:
       return { color: "#374151" };
@@ -104,6 +113,9 @@ export const getStatusBorderColor = (status: string) => {
     case "RETURNED_PERSONAL":
       return "#374151";
 
+    case "ARCHIVED":
+      return "#21252b";
+
     default:
       return "#d1d5db";
   }
@@ -121,6 +133,7 @@ export function statusLabel(status: string) {
     INCOMPLETE: "Chưa hoàn thành",
     RETURNED_CUSTOMER: "Hoàn đơn (Khách hàng)",
     RETURNED_PERSONAL: "Hoàn đơn (Cá nhân)",
+    ARCHIVED: "Đã lưu trữ",
   };
 
   return map[status] || status;
@@ -141,8 +154,9 @@ export const actionConfig: any = {
   COMPLETE: { label: "Hoàn thành", color: "#10b981" },
   FINISHED: { label: "Admin duyệt", color: "#15803d" },
   INCOMPLETE: { label: "Admin từ chối", color: "#ec4899" },
-  APPROVE_RETURN: { label: "Trưởng phòng duyệt", color: "#15803d" },
-  REJECT_RETURN: { label: "Trưởng phòng từ chối", color: "#ec4899" },
+  APPROVE_RETURN: { label: "Trưởng phòng duyệt đơn hoàn", color: "#15803d" },
+  REJECT_RETURN: { label: "Trưởng phòng từ chối đơn hoàn", color: "#ec4899" },
+  ARCHIVED: { label: "Đã lưu trữ", color: "#6b7280" },
 };
 
 export const getOrderTypeStyle = (type: string) => {

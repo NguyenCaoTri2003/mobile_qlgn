@@ -45,6 +45,14 @@ export default function useDashboardStats() {
     waiting: 0,
     assigned: 0,
     processing: 0,
+    finished: 0,
+    rejected: 0,
+    incomplete: 0,
+    returned: 0,
+    shipper_completed: 0,
+    archived: 0,
+    returned_customer: 0,
+    returned_personal: 0,
     vsvn: 0,
     vsnn: 0,
     gpld: 0,
@@ -91,15 +99,18 @@ export default function useDashboardStats() {
 
   useEffect(() => {
     loadStats();
-
-    // if (user) {
-    //   connectSocket(user.id, user.role, {
-    //     dashboardUpdate: () => {
-    //       loadStats(false);
-    //     },
-    //   });
-    // }
   }, [range, selectedDate, selectedMonth, selectedQuarter, selectedYear]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    connectSocket(user.id, user.role, {
+      dashboardUpdate: () => {
+        console.log("📊 dashboard update");
+        loadStats(false);
+      },
+    });
+  }, [user]);
 
   return {
     stats,

@@ -22,11 +22,15 @@ import AppNotification from "../components/AppNotification";
 import { ActivityIndicator } from "react-native";
 import * as ImageManipulator from "expo-image-manipulator";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
+// import { Audio } from "expo-av";
+import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 
 const MAX_SIZE = 5 * 1024 * 1024;
 
 export default function CompleteOrderScreen({ route }: any) {
-  const { id, attachments, missingNote } = route.params;
+  const { id, attachments, missingNote, orderType } = route.params;
+
+  console.log("type: ", route.params);
   const navigation = useNavigation();
   const [notify, setNotify] = useState({
     visible: false,
@@ -35,7 +39,6 @@ export default function CompleteOrderScreen({ route }: any) {
   });
 
   const [images, setImages] = useState<any[]>([]);
-  // const [signature, setSignature] = useState<any>(null);
   const [note, setNote] = useState("");
 
   const [loading, setLoading] = useState(false);
@@ -48,6 +51,13 @@ export default function CompleteOrderScreen({ route }: any) {
   const [scrollEnabled, setScrollEnabled] = useState(true);
   const [showSignModal, setShowSignModal] = useState(false);
   const [signaturePreview, setSignaturePreview] = useState<string | null>(null);
+
+  // const [recording, setRecording] = useState<Audio.Recording | null>(null);
+  const [audioUri, setAudioUri] = useState<string | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordDuration, setRecordDuration] = useState(0);
+  const [finalDuration, setFinalDuration] = useState(0);
+  const intervalRef = useRef<any>(null);
 
   const validateImage = async (asset: any) => {
     const info = await FileSystem.getInfoAsync(asset.uri);
@@ -151,24 +161,75 @@ export default function CompleteOrderScreen({ route }: any) {
     }
   };
 
-  // const completeOrder = () => {
-  //   if (loading) return;
+  // const startRecording = async () => {
+  //   try {
+  //     const permission = await Audio.requestPermissionsAsync();
+  //     if (!permission.granted) {
+  //       setNotify({
+  //         visible: true,
+  //         type: "error",
+  //         message: "Không có quyền microphone",
+  //       });
+  //       return;
+  //     }
 
-  //   if (images.length === 0) {
-  //     setNotify({
-  //       visible: true,
-  //       type: "error",
-  //       message: "Cần ít nhất 1 hình ảnh chứng từ",
+  //     await Audio.setAudioModeAsync({
+  //       allowsRecordingIOS: true,
+  //       playsInSilentModeIOS: true,
   //     });
-  //     return;
+
+  //     const { recording } = await Audio.Recording.createAsync(
+  //       Audio.RecordingOptionsPresets.HIGH_QUALITY,
+  //     );
+
+  //     setRecording(recording);
+  //     setIsRecording(true);
+  //     setRecordDuration(0);
+
+  //     intervalRef.current = setInterval(() => {
+  //       setRecordDuration((prev) => prev + 1);
+  //     }, 1000);
+  //   } catch (err) {
+  //     console.log("startRecording error:", err);
   //   }
+  // };
 
-  //   setLoading(true);
-  //   setLoadingText("Đang lấy vị trí GPS...");
+  // const stopRecording = async () => {
+  //   try {
+  //     if (!recording) return;
 
-  //   locationPromise.current = getLocation();
+  //     await recording.stopAndUnloadAsync();
 
-  //   signRef.current?.readSignature();
+  //     const uri = recording.getURI();
+
+  //     const status = await recording.getStatusAsync();
+
+  //     setFinalDuration(Math.floor((status.durationMillis || 0) / 1000));
+
+  //     setAudioUri(uri || null);
+  //     setRecording(null);
+  //     setIsRecording(false);
+
+  //     if (intervalRef.current) {
+  //       clearInterval(intervalRef.current);
+  //     }
+  //   } catch (err) {
+  //     console.log("stopRecording error:", err);
+  //   }
+  // };
+
+  const formatTime = (sec: number) => {
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return `${m}:${s.toString().padStart(2, "0")}`;
+  };
+
+  // const toggleRecording = () => {
+  //   if (isRecording) {
+  //     stopRecording();
+  //   } else {
+  //     startRecording();
+  //   }
   // };
 
   const completeOrder = async () => {
@@ -183,7 +244,7 @@ export default function CompleteOrderScreen({ route }: any) {
       return;
     }
 
-    if (!signaturePreview) {
+    if (orderType === "PICKUP" && !signaturePreview) {
       setNotify({
         visible: true,
         type: "error",
@@ -203,29 +264,38 @@ export default function CompleteOrderScreen({ route }: any) {
         return;
       }
 
-      // 👉 xử lý chữ ký
-      setLoadingText("Đang ghi chữ ký...");
-
-      const base64 = signaturePreview.replace("data:image/png;base64,", "");
-
-      const fileUri = FileSystem.cacheDirectory + "signature.png";
-
-      await FileSystem.writeAsStringAsync(fileUri, base64, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
-
-      // 👉 upload
       setLoadingText("Đang upload dữ liệu...");
+
+      let signatureFile = undefined;
+
+      if (signaturePreview) {
+        const base64 = signaturePreview.replace("data:image/png;base64,", "");
+
+        const fileUri = FileSystem.cacheDirectory + "signature.png";
+
+        await FileSystem.writeAsStringAsync(fileUri, base64, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+
+        signatureFile = {
+          uri: fileUri,
+          type: "image/png",
+          fileName: "signature.png",
+        };
+      }
 
       await orderService.shipperComplete(
         id,
         images,
         location,
-        {
-          uri: fileUri,
-          type: "image/png",
-          fileName: "signature.png",
-        },
+        signatureFile,
+        audioUri
+          ? {
+              uri: audioUri,
+              type: "audio/m4a",
+              name: `audio-${Date.now()}.m4a`,
+            }
+          : null,
         note,
         attachments,
         missingNote,
@@ -244,6 +314,7 @@ export default function CompleteOrderScreen({ route }: any) {
         type: "error",
         message: "Xác nhận hoàn tất đơn hàng thất bại",
       });
+      console.log("error completed: ", err);
     } finally {
       setLoading(false);
     }
@@ -254,7 +325,8 @@ export default function CompleteOrderScreen({ route }: any) {
     setShowSignModal(false);
   };
 
-  const isValid = images.length > 0 && !!signaturePreview;
+  const isValid =
+    images.length > 0 && (orderType === "DELIVERY" || !!signaturePreview);
 
   return (
     <KeyboardAwareScrollView
@@ -298,7 +370,9 @@ export default function CompleteOrderScreen({ route }: any) {
         </TouchableOpacity>
       </View>
 
-      <Text style={styles.title}>Chữ ký khách hàng *</Text>
+      <Text style={styles.title}>
+        Chữ ký khách hàng {orderType === "PICKUP" ? "*" : ""}
+      </Text>
 
       {signaturePreview ? (
         <View style={{ alignItems: "center", marginBottom: 10 }}>
@@ -334,25 +408,76 @@ export default function CompleteOrderScreen({ route }: any) {
         style={styles.note}
       />
 
+      {/* <View style={styles.audioContainer}>
+        <Text style={styles.audioLabel}>Ghi chú bằng giọng nói</Text>
+
+        <View style={styles.audioRow}>
+          <TouchableOpacity
+            onPress={toggleRecording}
+            style={[styles.micButton, isRecording && styles.micRecording]}
+          >
+            <Ionicons
+              name={isRecording ? "stop" : "mic"}
+              size={22}
+              color="#fff"
+            />
+          </TouchableOpacity>
+
+          <View style={{ flex: 1 }}>
+            {isRecording && (
+              <Text style={styles.recordingText}>
+                🔴 Đang ghi... {formatTime(recordDuration)}
+              </Text>
+            )}
+
+            {audioUri && !isRecording && (
+              <Text style={styles.recordedText}>
+                Đã ghi: {formatTime(finalDuration)}
+              </Text>
+            )}
+          </View>
+
+          {audioUri && !isRecording && (
+            <TouchableOpacity
+              onPress={async () => {
+                const { sound } = await Audio.Sound.createAsync({
+                  uri: audioUri,
+                });
+                await sound.playAsync();
+              }}
+              style={styles.playButton}
+            >
+              <Ionicons name="play" size={20} color="#fff" />
+            </TouchableOpacity>
+          )}
+
+          {audioUri && !isRecording && (
+            <TouchableOpacity
+              onPress={() => setAudioUri(null)}
+              style={styles.deleteButton}
+            >
+              <MaterialIcons name="delete" size={20} color="#fff" />
+            </TouchableOpacity>
+          )}
+        </View>
+      </View> */}
+
       <TouchableOpacity
         style={[
           styles.completeBtn,
-          (!isValid || loading) && {
-            opacity: 0.5,
-            backgroundColor: "#9ca3af",
-          },
+          (!isValid || loading || isRecording) && styles.disabledBtn,
         ]}
         onPress={completeOrder}
-        disabled={!isValid || loading}
+        disabled={!isValid || loading || isRecording}
       >
-        {loading ? (
-          <Text style={{ color: "white", fontWeight: "600" }}>
+        {isRecording ? (
+          <Text style={styles.completeText}>🎤 Đang ghi âm...</Text>
+        ) : loading ? (
+          <Text style={styles.completeText}>
             <ActivityIndicator color="#fff" /> {loadingText}
           </Text>
         ) : (
-          <Text style={{ color: "white", fontWeight: "600" }}>
-            Xác nhận hoàn tất
-          </Text>
+          <Text style={styles.completeText}>Xác nhận hoàn tất</Text>
         )}
       </TouchableOpacity>
 
@@ -578,5 +703,83 @@ const styles = StyleSheet.create({
     width: 200,
     height: 100,
     resizeMode: "contain",
+  },
+
+  audioContainer: {
+    marginTop: 15,
+    backgroundColor: "#f9fafb",
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+  },
+
+  audioLabel: {
+    fontWeight: "600",
+    marginBottom: 8,
+    color: "#374151",
+  },
+
+  audioRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+
+  micButton: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: "#2563eb",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  micRecording: {
+    backgroundColor: "#ef4444",
+  },
+
+  micIcon: {
+    fontSize: 20,
+    color: "#fff",
+  },
+
+  recordingText: {
+    color: "#ef4444",
+    fontWeight: "600",
+  },
+
+  recordedText: {
+    color: "#16a34a",
+    fontWeight: "600",
+  },
+
+  playButton: {
+    backgroundColor: "#16a34a",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+
+  playText: {
+    color: "#fff",
+    fontWeight: "700",
+  },
+
+  deleteButton: {
+    backgroundColor: "#ef4444",
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+
+  disabledBtn: {
+    opacity: 0.5,
+    backgroundColor: "#9ca3af",
+  },
+
+  completeText: {
+    color: "white",
+    fontWeight: "600",
   },
 });

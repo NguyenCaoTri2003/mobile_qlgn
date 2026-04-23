@@ -36,6 +36,11 @@ export const orderService = {
     return res.data;
   },
 
+  async getShipperStatsParams(params?: any) {
+    const res = await axiosClient.post(`/orders/shippers-stats-params`, params);
+    return res.data;
+  },
+
   async getTodayOrdersForShipper() {
     const res = await axiosClient.get(`/orders/today-for-shipper`);
     return res.data;
@@ -163,8 +168,9 @@ export const orderService = {
     id: number,
     files: any[],
     location: any,
-    signature: any,
-    note: string,
+    signature?: any,
+    audioFile?: any,
+    note?: string,
     checklist?: any[],
     missingNote?: string | null,
   ) {
@@ -186,7 +192,18 @@ export const orderService = {
       } as any);
     }
 
-    formData.append("note", note);
+    if (audioFile) {
+      formData.append("audio", {
+        uri: audioFile.uri,
+        type: audioFile.type || "audio/m4a",
+        name: audioFile.name || `audio-${Date.now()}.m4a`,
+      } as any);
+    }
+
+    if (note) {
+      formData.append("note", note);
+    }
+
     formData.append("location", JSON.stringify(location));
 
     if (checklist && checklist.length > 0) {
@@ -304,6 +321,15 @@ export const orderService = {
     return res.data;
   },
 
+  async qlArchivedOrder(
+    id: number,
+    order_code: string,
+  ) {
+    const res = await axiosClient.post(`/orders/${id}/archived`, {order_code});
+
+    return res.data;
+  },
+
   async resolveRequest(id: number, note: string) {
     const res = await axiosClient.put(`/orders/${id}/resolve`, { note });
     return res.data;
@@ -346,9 +372,9 @@ export const orderService = {
       { order, attachments },
       {
         responseType: "arraybuffer",
-      }
+      },
     );
 
     return res.data;
-  }
+  },
 };

@@ -8,8 +8,9 @@ export type RootTabParamList = {
 export type OrdersStackParamList = {
   OrderList: undefined;
   OrderDetail: { id: number };
-  CompleteOrder: { id: number, attachments?: any[], missingNote?: string};
+  CompleteOrder: { id: number, attachments?: any[], missingNote?: string, orderType?: string};
   ReturnOrder: { id: number };
   SupplementScreen: { id: number, createdBy: number, orderCode: string; creator: string };
   ReassignOrderScreen: { id: number, orderCode: string; attachments: any };
+  OrderLogs: { orderId: number };
 };
