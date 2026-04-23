@@ -5,7 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Dimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
@@ -21,8 +20,6 @@ import TodayOrdersCard from "../components/dashboard/TodayOrdersCard";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import useShipperStats from "../hooks/useShipperStats";
 import { Ionicons } from "@expo/vector-icons";
-
-const { width, height } = Dimensions.get("window");
 
 export default function DashboardScreen({ navigation }: any) {
   const {
@@ -58,34 +55,11 @@ export default function DashboardScreen({ navigation }: any) {
 
   const isNVGN = user?.role === "NVGN";
   const [showPicker, setShowPicker] = useState(false);
-  const [currentTime, setCurrentTime] = useState(new Date());
 
   const [tooltip, setTooltip] = useState<{
     index: number;
     type: string;
   } | null>(null);
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, []);
-
-  const getGreeting = () => {
-    const hour = currentTime.getHours();
-    if (hour < 12) return "Chào buổi sáng";
-    if (hour < 18) return "Chào buổi chiều";
-    return "Chào buổi tối";
-  };
-
-  const getGreetingIcon = () => {
-    const hour = currentTime.getHours();
-    if (hour < 12) return "sunny-outline";
-    if (hour < 18) return "partly-sunny-outline";
-    return "moon-outline";
-  };
 
   const buildParams = () => {
     return {
@@ -152,129 +126,27 @@ export default function DashboardScreen({ navigation }: any) {
   }, [range, selectedDate, selectedMonth, selectedQuarter, selectedYear]);
 
   return (
-    <View style={{ flex: 1 }}>
-      {/* Background với gradient và hiệu ứng đẹp hơn */}
-      <LinearGradient
-        colors={["#e8edf5", "#f0f4fa", "#e8edf5"]}
-        style={StyleSheet.absoluteFillObject}
-      />
-
-      {/* Các circle trang trí với hiệu ứng đẹp hơn */}
-      <View style={styles.circle1}>
-        <LinearGradient
-          colors={["#3b82f6", "#60a5fa"]}
-          style={styles.circleGradient}
-        />
-      </View>
-      <View style={styles.circle2}>
-        <LinearGradient
-          colors={["#8b5cf6", "#a78bfa"]}
-          style={styles.circleGradient}
-        />
-      </View>
-      <View style={styles.circle3}>
-        <LinearGradient
-          colors={["#14b8a6", "#5eead4"]}
-          style={styles.circleGradient}
-        />
-      </View>
-      <View style={styles.circle4}>
-        <LinearGradient
-          colors={["#f59e0b", "#fbbf24"]}
-          style={styles.circleGradient}
-        />
-      </View>
-      <View style={styles.circle5}>
-        <LinearGradient
-          colors={["#2563eb", "#3b82f6"]}
-          style={styles.circleGradient}
-        />
-      </View>
-      <View style={styles.circle6}>
-        <LinearGradient
-          colors={["#ec4899", "#f472b6"]}
-          style={styles.circleGradient}
-        />
-      </View>
-      <View style={styles.circle7}>
-        <LinearGradient
-          colors={["#06b6d4", "#67e8f9"]}
-          style={styles.circleGradient}
-        />
-      </View>
-
-      {/* Chấm nhỏ trang trí */}
-      <View style={styles.dotsContainer}>
-        {[...Array(120)].map((_, i) => (
-          <View
-            key={i}
-            style={[
-              styles.dot,
-              {
-                left: (i * 131) % width,
-                top: (i * 73) % height,
-                opacity: 0.05 + (i % 5) * 0.01,
-                width: 1.5 + (i % 3),
-                height: 1.5 + (i % 3),
-              },
-            ]}
-          />
-        ))}
-      </View>
-
-      {/* Hiệu ứng ánh sáng */}
-      <View style={styles.lightEffect1} />
-      <View style={styles.lightEffect2} />
-
+    <LinearGradient
+      colors={["#eef2f7", "#f8fafc", "#eef2f7"]}
+      style={{ flex: 1 }}
+    >
       <SafeAreaView style={{ flex: 1 }} edges={["top", "left", "right"]}>
         <ScrollView
           contentContainerStyle={styles.container}
           showsVerticalScrollIndicator={false}
         >
-          {/* HEADER MỚI - ĐẸP HƠN */}
-          <LinearGradient
-            colors={["#2563eb", "#1d4ed8", "#1e40af"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.headerGradient}
-          >
-            <View style={styles.headerContent}>
-              <View style={styles.greetingContainer}>
-                <View style={styles.iconCircle}>
-                  <Ionicons name={getGreetingIcon()} size={28} color="#fff" />
-                </View>
-                <View>
-                  <Text style={styles.greetingText}>{getGreeting()}</Text>
-                  <Text style={styles.userName}>{user?.name} 👋</Text>
-                </View>
-              </View>
-            </View>
-            <View style={styles.headerBottom}>
-              <View style={styles.headerBadge}>
-                <View style={styles.badgeDot} />
-                <Text style={styles.badgeText}>Hệ thống đang hoạt động</Text>
-              </View>
-              <View style={styles.statsBrief}>
-                <View style={styles.briefItem}>
-                  <Ionicons name="calendar-outline" size={16} color="#bfdbfe" />
-                  <Text style={styles.briefText}>
-                    {currentTime.toLocaleDateString("vi-VN")}
-                  </Text>
-                </View>
-                <View style={styles.briefDivider} />
-                <View style={styles.briefItem}>
-                  <Ionicons name="time-outline" size={16} color="#bfdbfe" />
-                  <Text style={styles.briefText}>
-                    {currentTime.toLocaleTimeString("vi-VN", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                      second: "2-digit",
-                    })}
-                  </Text>
-                </View>
-              </View>
-            </View>
-          </LinearGradient>
+          {/* HEADER */}
+          <View style={styles.header}>
+            {/* {loading ? (
+              <Skeleton width={200} height={26} />
+            ) : ( */}
+            <Text style={styles.title}>Xin chào {user?.name} 👋</Text>
+            {/* )} */}
+
+            <Text style={styles.subtitle}>
+              Hệ thống Nhị Gia Logistics đang hoạt động
+            </Text>
+          </View>
 
           {isNVGN && (
             <TodayOrdersCard orders={todayOrders} loading={todayLoading} />
@@ -862,7 +734,7 @@ export default function DashboardScreen({ navigation }: any) {
           </View>
         </ScrollView>
       </SafeAreaView>
-    </View>
+    </LinearGradient>
   );
 }
 
@@ -872,229 +744,22 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
 
-  circle1: {
-    position: "absolute",
-    width: 280,
-    height: 280,
-    borderRadius: 140,
-    top: -100,
-    left: -100,
-    overflow: "hidden",
-  },
-  circle2: {
-    position: "absolute",
-    width: 350,
-    height: 350,
-    borderRadius: 175,
-    top: "15%",
-    right: -120,
-    overflow: "hidden",
-  },
-  circle3: {
-    position: "absolute",
-    width: 220,
-    height: 220,
-    borderRadius: 110,
-    bottom: "25%",
-    left: -80,
-    overflow: "hidden",
-  },
-  circle4: {
-    position: "absolute",
-    width: 280,
-    height: 280,
-    borderRadius: 140,
-    bottom: "5%",
-    right: -100,
-    overflow: "hidden",
-  },
-  circle5: {
-    position: "absolute",
-    width: 400,
-    height: 400,
-    borderRadius: 200,
-    top: "45%",
-    left: "20%",
-    overflow: "hidden",
-  },
-  circle6: {
-    position: "absolute",
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    bottom: "35%",
-    right: "15%",
-    overflow: "hidden",
-  },
-  circle7: {
-    position: "absolute",
-    width: 150,
-    height: 150,
-    borderRadius: 75,
-    top: "60%",
-    left: "5%",
-    overflow: "hidden",
-  },
-  circleGradient: {
-    flex: 1,
-    opacity: 0.04,
-  },
-
-  dotsContainer: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-  },
-  dot: {
-    position: "absolute",
-    borderRadius: 10,
-    backgroundColor: "#64748b",
-  },
-
-  lightEffect1: {
-    position: "absolute",
-    top: "10%",
-    right: "5%",
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    backgroundColor: "#60a5fa",
-    opacity: 0.05,
-    transform: [{ scale: 1 }],
-  },
-  lightEffect2: {
-    position: "absolute",
-    bottom: "15%",
-    left: "0%",
-    width: 250,
-    height: 250,
-    borderRadius: 125,
-    backgroundColor: "#a78bfa",
-    opacity: 0.05,
-  },
-
-  // HEADER MỚI
-  headerGradient: {
-    marginHorizontal: -16,
-    marginTop: -16,
+  header: {
     marginBottom: 20,
-    paddingTop: 20,
-    paddingBottom: 24,
-    paddingHorizontal: 20,
-    borderBottomLeftRadius: 32,
-    borderBottomRightRadius: 32,
-    shadowColor: "#1e40af",
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 10,
   },
 
-  headerContent: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: 20,
-    flexWrap: "wrap", 
-    gap: 12, 
-  },
-
-  greetingContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    flexShrink: 1, 
-  },
-
-  userName: {
-    fontSize: 20,
+  title: {
+    fontSize: 26,
     fontWeight: "800",
-    color: "#fff",
-    flexShrink: 1, 
+    color: "#0f172a",
   },
 
-  headerBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.15)",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    gap: 6,
-    flexShrink: 0, 
-  },
-
-  headerBottom:{
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    flexWrap: "wrap",
-    gap: 12,
-  }, 
-
-  iconCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: "rgba(255,255,255,0.2)",
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.3)",
-  },
-
-  greetingText: {
-    fontSize: 14,
-    color: "#bfdbfe",
-    fontWeight: "500",
-    marginBottom: 4,
-  },
-
-  badgeDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: "#22c55e",
-  },
-
-  badgeText: {
-    fontSize: 12,
-    color: "#fff",
-    fontWeight: "600",
-  },
-
-  statsBrief: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.1)",
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 24,
-    alignSelf: "flex-start",
-    gap: 12,
-  },
-
-  briefItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-
-  briefDivider: {
-    width: 1,
-    height: 16,
-    backgroundColor: "rgba(255,255,255,0.3)",
-  },
-
-  briefText: {
+  subtitle: {
     fontSize: 13,
-    color: "#fff",
-    fontWeight: "500",
+    color: "#64748b",
+    marginTop: 6,
   },
 
-  // Các style cũ giữ nguyên
   grid: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -1165,7 +830,8 @@ const styles = StyleSheet.create({
   option: {
     paddingVertical: 8,
     paddingHorizontal: 14,
-    borderRadius: 999,
+    borderRadius: 999, // pill shape
+
     backgroundColor: "#f1f5f9",
     fontSize: 13,
     color: "#475569",
@@ -1194,7 +860,7 @@ const styles = StyleSheet.create({
 
   quarterRow: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "center", // ⭐ FIX lệch
     gap: 8,
     flexWrap: "wrap",
   },
@@ -1203,7 +869,9 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 999,
+
     backgroundColor: "#f1f5f9",
+
     borderWidth: 1,
     borderColor: "#e2e8f0",
   },
@@ -1227,6 +895,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 14,
     borderRadius: 999,
+
     backgroundColor: "#eff6ff",
     borderWidth: 1,
     borderColor: "#bfdbfe",
@@ -1241,10 +910,12 @@ const styles = StyleSheet.create({
   valuePill: {
     alignSelf: "flex-start",
     marginTop: 4,
+
     backgroundColor: "#f8fafc",
     paddingVertical: 8,
     paddingHorizontal: 14,
     borderRadius: 999,
+
     borderWidth: 1,
     borderColor: "#e2e8f0",
   },
@@ -1318,6 +989,7 @@ const styles = StyleSheet.create({
     color: "#2563eb",
   },
 
+  // skeleton
   skeletonLine: {
     height: 14,
     width: 120,
@@ -1353,12 +1025,14 @@ const styles = StyleSheet.create({
 
   tooltip: {
     position: "absolute",
-    bottom: 22,
+    bottom: 22, // nằm trên icon
     left: 0,
+
     backgroundColor: "#111",
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
+
     zIndex: 10,
   },
   tooltipText: {

@@ -7,6 +7,7 @@ import { OrdersStackParamList } from "./types";
 import ReturnOrderScreen from "../screens/ReturnOrderScreen";
 import SupplementScreen from "../screens/SupplementScreen";
 import ReassignOrderScreen from "../screens/ReassignOrderScreen";
+import OrderLogsScreen from "../screens/OrderLogsScreen";
 
 const Stack = createNativeStackNavigator<OrdersStackParamList>();
 
@@ -47,6 +48,12 @@ export default function OrdersStack() {
         name="ReassignOrderScreen"
         component={ReassignOrderScreen}
         options={{ title: "Phân công lại nhân viên giao nhận" }}
+      />
+      
+      <Stack.Screen
+        name="OrderLogs"
+        component={OrderLogsScreen}
+        options={{ title: "Lịch sử đơn giao nhận" }}
       />
     </Stack.Navigator>
   );

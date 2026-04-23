@@ -55,6 +55,7 @@ import * as Print from "expo-print";
 import { buildOrderHTML } from "../templates/buildOrderHTML";
 import ImagePreviewModal from "../components/ImagePreviewModal";
 import { Buffer } from "buffer";
+// import { Audio, AVPlaybackStatus } from "expo-av";
 
 type NavigationType = NativeStackNavigationProp<
   OrdersStackParamList,
@@ -91,6 +92,17 @@ export default function OrderDetailScreen({ route }: any) {
   const orderType = order?.orderType;
   const isPickup = orderType === "PICKUP";
   const [activeNoteId, setActiveNoteId] = useState<number | null>(null);
+  const [confirmVisible, setConfirmVisible] = useState(false);
+
+  const [currentAudio, setCurrentAudio] = useState<string | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+
+  const [progressMap, setProgressMap] = useState<Record<number, number>>({});
+  const [currentTimeMap, setCurrentTimeMap] = useState<Record<number, string>>(
+    {},
+  );
+  const [durationMap, setDurationMap] = useState<Record<number, string>>({});
+  // const [sound, setSound] = useState<Audio.Sound | null>(null);
 
   const [notify, setNotify] = useState({
     visible: false,
@@ -124,10 +136,30 @@ export default function OrderDetailScreen({ route }: any) {
   useLayoutEffect(() => {
     navigation.setOptions({
       headerRight: () => (
-        <TouchableOpacity onPress={handleExportDocx} style={styles.exportBtn}>
-          <Ionicons name="download-outline" size={16} color="#2563eb" />
-          <Text style={styles.exportText}>Xuất đơn</Text>
-        </TouchableOpacity>
+        <View style={{ flexDirection: "row", gap: 5 }}>
+          {user.role !== "NVGN" && (
+            <TouchableOpacity
+              onPress={() =>
+                navigation.navigate("OrderLogs", { orderId: order.id })
+              }
+              style={[
+                styles.exportBtn,
+                { backgroundColor: "#16a34a20", borderColor: "#16a34a" },
+              ]}
+            >
+              <Ionicons name="time-outline" size={16} color="#16a34a" />
+              <Text style={[styles.exportText, { color: "#16a34a" }]}>
+                Lịch sử
+              </Text>
+            </TouchableOpacity>
+          )}
+
+          {/* Nút xuất đơn */}
+          <TouchableOpacity onPress={handleExportDocx} style={styles.exportBtn}>
+            <Ionicons name="download-outline" size={16} color="#2563eb" />
+            <Text style={styles.exportText}>Xuất đơn</Text>
+          </TouchableOpacity>
+        </View>
       ),
     });
   }, [order, attachments]);
@@ -172,6 +204,7 @@ export default function OrderDetailScreen({ route }: any) {
   const isChecklistActive = () => {
     const status = order?.status;
     const role = user?.role;
+    const isOwner = order?.shipperId === user?.id;
 
     if (role === "NVGN") {
       if (orderType === "PICKUP") {
@@ -181,18 +214,15 @@ export default function OrderDetailScreen({ route }: any) {
       return ["ASSIGNED", "PENDING", "SUPPLEMENT_REQUIRED"].includes(status);
     }
 
-    // if (role === "QL") {
-    //   if (orderType === "PICKUP") {
-    //     return;
-    //   }
+    if (role === "QL") {
+      if (!isOwner) return false;
 
-    //   return [
-    //     "PENDING",
-    //     "SUPPLEMENT_REQUIRED",
-    //     "RETURNED_CUSTOMER",
-    //     "RETURNED_PERSONAL",
-    //   ].includes(status);
-    // }
+      if (orderType === "PICKUP") {
+        return status === "PROCESSING";
+      }
+
+      return ["ASSIGNED"].includes(status);
+    }
 
     return false;
   };
@@ -201,10 +231,10 @@ export default function OrderDetailScreen({ route }: any) {
     attachments.length > 0 && attachments.every((a) => a.checked);
 
   const toggleChecklist = (index: number) => {
-    if (!isChecklistActive()) return;
+    const newList = attachments.map((a, i) =>
+      i === index ? { ...a, checked: !a.checked } : a,
+    );
 
-    const newList = [...attachments];
-    newList[index].checked = !newList[index].checked;
     setAttachments(newList);
   };
 
@@ -363,7 +393,7 @@ export default function OrderDetailScreen({ route }: any) {
         return;
       }
     }
-    navigation.navigate("CompleteOrder", { id });
+    navigation.navigate("CompleteOrder", { id, orderType });
   };
 
   const acceptWithMissing = async () => {
@@ -397,7 +427,12 @@ export default function OrderDetailScreen({ route }: any) {
         console.log(err);
       }
     } else {
-      navigation.navigate("CompleteOrder", { id, attachments, missingNote });
+      navigation.navigate("CompleteOrder", {
+        id,
+        attachments,
+        missingNote,
+        orderType,
+      });
     }
   };
 
@@ -478,7 +513,9 @@ export default function OrderDetailScreen({ route }: any) {
     try {
       const shipper = shippers.find((s) => s.id === selectedShipper);
 
-      const attachmentIds = attachments.map((a) => a.id);
+      const attachmentIds = attachments
+        .filter((a) => a.checked)
+        .map((a) => a.id);
 
       await orderService.assignReceiver(
         order.id,
@@ -602,7 +639,6 @@ export default function OrderDetailScreen({ route }: any) {
 
   const handleExportDocx = async () => {
     try {
-
       const now = new Date();
       const pad = (n: number) => n.toString().padStart(2, "0");
 
@@ -635,6 +671,103 @@ export default function OrderDetailScreen({ route }: any) {
     }
   };
 
+  const formatTime = (sec: any) => {
+    if (!sec) return "0:00";
+    const m = Math.floor(sec / 60);
+    const s = Math.floor(sec % 60);
+    return `${m}:${s.toString().padStart(2, "0")}`;
+  };
+
+  // const toggleAudio = async (url: string, index: number) => {
+  //   try {
+  //     // pause nếu đang phát cùng file
+  //     if (currentAudio === url && isPlaying && sound) {
+  //       await sound.pauseAsync();
+  //       setIsPlaying(false);
+  //       return;
+  //     }
+
+  //     let newSound: Audio.Sound | null = sound;
+
+  //     // nếu đổi file khác
+  //     if (currentAudio !== url) {
+  //       if (sound) {
+  //         await sound.unloadAsync();
+  //       }
+
+  //       const { sound: createdSound } = await Audio.Sound.createAsync(
+  //         { uri: url },
+  //         { shouldPlay: true },
+  //         onPlaybackStatusUpdate(index),
+  //       );
+
+  //       newSound = createdSound;
+  //       setSound(createdSound);
+  //       setCurrentAudio(url);
+  //     } else if (newSound) {
+  //       await newSound.playAsync();
+  //     }
+
+  //     setIsPlaying(true);
+  //   } catch (err) {
+  //     console.log("Audio error:", err);
+  //   }
+  // };
+
+  // const onPlaybackStatusUpdate =
+  //   (index: number) => (status: AVPlaybackStatus) => {
+  //     if (!status.isLoaded) return;
+
+  //     const current = (status.positionMillis ?? 0) / 1000;
+  //     const duration = (status.durationMillis ?? 0) / 1000;
+
+  //     setCurrentTimeMap((prev) => ({
+  //       ...prev,
+  //       [index]: formatTime(current),
+  //     }));
+
+  //     setDurationMap((prev) => ({
+  //       ...prev,
+  //       [index]: formatTime(duration),
+  //     }));
+
+  //     setProgressMap((prev) => ({
+  //       ...prev,
+  //       [index]: duration ? (current / duration) * 100 : 0,
+  //     }));
+
+  //     if (status.didJustFinish) {
+  //       setIsPlaying(false);
+
+  //       setProgressMap((prev) => ({
+  //         ...prev,
+  //         [index]: 0,
+  //       }));
+  //     }
+  //   };
+
+  const archiveReturnedHandler = async () => {
+    try {
+      await orderService.qlArchivedOrder(order.id, order.orderCode);
+      setNotify({
+        visible: true,
+        type: "success",
+        message: "Đã lưu trữ đơn thành công",
+      });
+      setTimeout(async () => {
+        await reloadOrderCounts();
+        navigation.navigate("OrderList" as never);
+      }, 1000);
+    } catch (err) {
+      setNotify({
+        visible: true,
+        type: "error",
+        message: "Lưu trữ đơn thất bại",
+      });
+      console.log("Archive error:", err);
+    }
+  };
+
   if (loading) {
     return (
       <View style={styles.center}>
@@ -664,25 +797,41 @@ export default function OrderDetailScreen({ route }: any) {
     (order?.status === "RETURNED_CUSTOMER" ||
       order?.status === "RETURNED_PERSONAL");
 
-  const isNVGNAssigned = user?.role === "NVGN" && order?.status === "ASSIGNED";
+  // const isNVGNAssigned = user?.role === "NVGN" && order?.status === "ASSIGNED";
+  const isNVGNAssigned =
+    order?.status === "ASSIGNED" &&
+    (user?.role === "NVGN" ||
+      (user?.role === "QL" && order?.shipperId === user?.id));
 
   const isNVGNProcessing =
-    user?.role === "NVGN" && order?.status === "PROCESSING";
+    order?.status === "PROCESSING" &&
+    (user?.role === "NVGN" ||
+      (user?.role === "QL" && order?.shipperId === user?.id));
 
   const hasActions =
     isQLAssign || isQLReturned || isNVGNAssigned || isNVGNProcessing;
 
+  // const canReassign =
+  //   order?.status === "RETURNED_PERSONAL" ||
+  //   (order?.status === "RETURNED_CUSTOMER" &&
+  //     (!order?.deliveryAttempt?.approvalStatus ||
+  //       ["APPROVED", "REJECTED"].includes(
+  //         order?.deliveryAttempt?.approvalStatus,
+  //       )));
+
+  // const canApprove =
+  //   order?.status === "RETURNED_CUSTOMER" &&
+  //   order?.deliveryAttempt?.approvalStatus === "PENDING";
+
+  const approval = order?.deliveryAttempt?.approvalStatus;
+
   const canReassign =
-    order?.status === "RETURNED_PERSONAL" ||
-    (order?.status === "RETURNED_CUSTOMER" &&
-      (!order?.deliveryAttempt?.approvalStatus ||
-        ["APPROVED", "REJECTED"].includes(
-          order?.deliveryAttempt?.approvalStatus,
-        )));
+    ["RETURNED_CUSTOMER", "RETURNED_PERSONAL"].includes(order?.status) &&
+    (!approval || ["APPROVED", "REJECTED"].includes(approval));
 
   const canApprove =
-    order?.status === "RETURNED_CUSTOMER" &&
-    order?.deliveryAttempt?.approvalStatus === "PENDING";
+    ["RETURNED_CUSTOMER", "RETURNED_PERSONAL"].includes(order?.status) &&
+    approval === "PENDING";
 
   const deliveryStatus = getDeliveryStatus(
     order.date,
@@ -879,7 +1028,9 @@ export default function OrderDetailScreen({ route }: any) {
 
           <TouchableOpacity style={styles.row} onPress={call}>
             <Ionicons name="call-outline" size={18} color="#2563eb" />
-            <Text style={styles.link}>{order.phone}</Text>
+            <Text style={styles.link}>
+              {order.phone || "Không có số điện thoại"}
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.row} onPress={openMap}>
@@ -889,7 +1040,9 @@ export default function OrderDetailScreen({ route }: any) {
 
           <View style={styles.row}>
             <Ionicons name="person-outline" size={18} color="#6b7280" />
-            <Text style={styles.value}>{order.contact || "Chưa có"}</Text>
+            <Text style={styles.value}>
+              {order.contact || "Không có người liên hệ"}
+            </Text>
           </View>
         </View>
 
@@ -1211,10 +1364,66 @@ export default function OrderDetailScreen({ route }: any) {
                 <Text style={styles.noteText}>"{order.completionNote}"</Text>
               </View>
             )}
+
+            {/* {order.audioFiles?.length > 0 && (
+              <View style={{ marginTop: 12 }}>
+                <Text style={styles.audioTitle}>Ghi chú bằng âm thanh</Text>
+
+                {order.audioFiles.map((audio: any, index: number) => {
+                  const isCurrent = currentAudio === audio.url;
+
+                  return (
+                    <View key={index} style={styles.audioCard}>
+                      <TouchableOpacity
+                        onPress={() => toggleAudio(audio.url, index)}
+                        style={[
+                          styles.playBtn,
+                          isCurrent && isPlaying && styles.playBtn,
+                        ]}
+                      >
+                        <Ionicons
+                          name={isCurrent && isPlaying ? "pause" : "play"}
+                          size={18}
+                          color="#fff"
+                        />
+                      </TouchableOpacity>
+
+                      <View style={{ flex: 1 }}>
+                        <View style={styles.progressBar}>
+                          <View
+                            style={[
+                              styles.progress,
+                              {
+                                width: isCurrent
+                                  ? `${progressMap[index] || 0}%`
+                                  : "0%",
+                              },
+                            ]}
+                          />
+                        </View>
+
+                        <View style={styles.timeRow}>
+                          <Text style={styles.timeTextSmall}>
+                            {isCurrent
+                              ? currentTimeMap[index] || "0:00"
+                              : "0:00"}
+                          </Text>
+
+                          <Text style={styles.timeTextSmall}>
+                            {durationMap[index] || "0:00"}
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+                  );
+                })}
+              </View>
+            )} */}
           </View>
         )}
 
         {(order.status === "RETURNED_CUSTOMER" ||
+          order.status === "ARCHIVED" ||
           order.status === "RETURNED_PERSONAL") && (
           <View style={[styles.card, { backgroundColor: "#fef2f2" }]}>
             <View style={styles.headerRow}>
@@ -1423,6 +1632,13 @@ export default function OrderDetailScreen({ route }: any) {
                     >
                       <Text style={styles.btnText}>Phân công lại</Text>
                     </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={styles.archiveBtn}
+                      onPress={() => archiveReturnedHandler()}
+                    >
+                      <Text style={styles.btnText}>Lưu trữ đơn</Text>
+                    </TouchableOpacity>
                   </>
                 )}
 
@@ -1531,7 +1747,7 @@ export default function OrderDetailScreen({ route }: any) {
 
                   <TouchableOpacity
                     style={styles.btnReturn}
-                    onPress={requestSupplement}
+                    onPress={() => setConfirmVisible(true)}
                   >
                     <Text style={styles.btnText}>Yêu cầu bổ sung (Trả về)</Text>
                   </TouchableOpacity>
@@ -1633,6 +1849,42 @@ export default function OrderDetailScreen({ route }: any) {
                 onPress={() => setRejectReturnModal(false)}
               >
                 <Text style={styles.rejectCancelText}>Huỷ</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={confirmVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setConfirmVisible(false)}
+      >
+        <View style={styles.overlay}>
+          <View style={styles.modalBoxDesc}>
+            <Text style={styles.modalTitle}>Xác nhận</Text>
+
+            <Text style={styles.modalDesc}>
+              Bạn có chắc chắn muốn yêu cầu bổ sung hồ sơ?
+            </Text>
+
+            <View style={styles.modalActionsDesc}>
+              <TouchableOpacity
+                style={[styles.modalBtn, styles.cancelBtn]}
+                onPress={() => setConfirmVisible(false)}
+              >
+                <Text style={styles.cancelText}>Huỷ</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.modalBtn, styles.confirmBtn]}
+                onPress={() => {
+                  setConfirmVisible(false);
+                  requestSupplement();
+                }}
+              >
+                <Text style={styles.confirmText}>Xác nhận</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -1811,6 +2063,7 @@ const styles = StyleSheet.create({
     color: "white",
     fontWeight: "700",
     fontSize: 15,
+    textAlign: "center",
   },
 
   checkHeader: {
@@ -2291,6 +2544,17 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginRight: 6,
     alignItems: "center",
+    justifyContent: "center",
+  },
+
+  archiveBtn: {
+    flex: 1,
+    backgroundColor: "#7b25eb",
+    padding: 12,
+    borderRadius: 8,
+    marginRight: 6,
+    alignItems: "center",
+    justifyContent: "center",
   },
 
   supplementBtn: {
@@ -2300,6 +2564,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginLeft: 6,
     alignItems: "center",
+    justifyContent: "center",
   },
 
   assignedBox: {
@@ -2506,7 +2771,7 @@ const styles = StyleSheet.create({
 
     backgroundColor: "#eff6ff",
     borderWidth: 1,
-    borderColor: "#bfdbfe",
+    borderColor: "#2563eb",
 
     paddingHorizontal: 10,
     paddingVertical: 6,
@@ -2661,5 +2926,114 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#f97316",
     fontStyle: "italic",
+  },
+
+  overlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  modalBoxDesc: {
+    width: "85%",
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 20,
+  },
+
+  modalTitleDesc: {
+    fontSize: 18,
+    fontWeight: "700",
+    marginBottom: 10,
+    color: "#111",
+  },
+
+  modalDesc: {
+    fontSize: 14,
+    color: "#6b7280",
+    marginBottom: 20,
+  },
+
+  modalActionsDesc: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: 10,
+  },
+
+  modalBtn: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+  },
+
+  cancelBtn: {
+    backgroundColor: "#f3f4f6",
+  },
+
+  confirmBtn: {
+    backgroundColor: "#ef4444",
+  },
+
+  cancelText: {
+    color: "#111",
+    fontWeight: "600",
+  },
+
+  confirmText: {
+    color: "#fff",
+    fontWeight: "600",
+  },
+
+  audioTitle: {
+    fontSize: 12,
+    color: "#6B7280",
+    marginBottom: 8,
+  },
+
+  audioCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fff",
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 8,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+
+  playBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#16A34A",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 10,
+  },
+
+  progressBar: {
+    height: 4,
+    backgroundColor: "#E5E7EB",
+    borderRadius: 999,
+    overflow: "hidden",
+  },
+
+  progress: {
+    height: "100%",
+    backgroundColor: "#16A34A",
+  },
+
+  timeRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 4,
+  },
+
+  timeTextSmall: {
+    fontSize: 10,
+    color: "#9CA3AF",
   },
 });

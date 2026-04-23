@@ -6,6 +6,7 @@ export const logService = {
       page: params.page || 1,
       limit: 20,
       user: params.user || "",
+      orderId: params.orderId || "",
       orderCode: params.orderCode || "",
       fromDate: params.fromDate || "",
       toDate: params.toDate || "",
