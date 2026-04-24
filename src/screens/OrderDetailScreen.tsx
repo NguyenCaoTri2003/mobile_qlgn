@@ -788,14 +788,14 @@ export default function OrderDetailScreen({ route }: any) {
 
   const isQLAssign =
     user?.role === "QL" &&
-    (order?.status === "PENDING" ||
-      order?.status === "REJECTED" ||
-      order?.status === "SUPPLEMENT_REQUIRED");
+    (order?.status === "PENDING");
 
   const isQLReturned =
     user?.role === "QL" &&
     (order?.status === "RETURNED_CUSTOMER" ||
-      order?.status === "RETURNED_PERSONAL");
+      order?.status === "RETURNED_PERSONAL" ||
+      order?.status === "REJECTED" ||
+      order?.status === "SUPPLEMENT_REQUIRED");
 
   // const isNVGNAssigned = user?.role === "NVGN" && order?.status === "ASSIGNED";
   const isNVGNAssigned =
@@ -826,8 +826,9 @@ export default function OrderDetailScreen({ route }: any) {
   const approval = order?.deliveryAttempt?.approvalStatus;
 
   const canReassign =
-    ["RETURNED_CUSTOMER", "RETURNED_PERSONAL"].includes(order?.status) &&
-    (!approval || ["APPROVED", "REJECTED"].includes(approval));
+    ["REJECTED", "SUPPLEMENT_REQUIRED"].includes(order?.status) ||
+    (["RETURNED_CUSTOMER", "RETURNED_PERSONAL"].includes(order?.status) &&
+      (!approval || ["APPROVED", "REJECTED"].includes(approval)));
 
   const canApprove =
     ["RETURNED_CUSTOMER", "RETURNED_PERSONAL"].includes(order?.status) &&
@@ -1601,7 +1602,7 @@ export default function OrderDetailScreen({ route }: any) {
 
           {isQLReturned && (
             <View style={styles.card}>
-              <Text style={styles.cardTitle}>Xử lý đơn hoàn</Text>
+              <Text style={styles.cardTitle}>Xử lý đơn</Text>
 
               <View style={styles.rowButtons}>
                 {/* Phân công lại */}
@@ -1627,6 +1628,8 @@ export default function OrderDetailScreen({ route }: any) {
                           id: order.id,
                           orderCode: order.orderCode,
                           attachments,
+                          deliveryDate: order.date,
+                          deliveryTime: order.time,
                         })
                       }
                     >
