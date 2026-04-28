@@ -23,14 +23,14 @@ const formatBadge = (count: number) => {
 };
 
 // Custom Tab Icon với style đẹp hơn
-const TabIcon = ({ 
-  name, 
-  focused, 
+const TabIcon = ({
+  name,
+  focused,
   color,
-  badge 
-}: { 
-  name: string; 
-  focused: boolean; 
+  badge
+}: {
+  name: string;
+  focused: boolean;
   color: string;
   badge?: number;
 }) => {
@@ -42,10 +42,10 @@ const TabIcon = ({
         styles.iconBackground,
         focused && styles.iconBackgroundActive
       ]}>
-        <Ionicons 
-          name={iconName as any} 
-          size={focused ? 24 : 22} 
-          color={focused ? "#2563eb" : "#94a3b8"} 
+        <Ionicons
+          name={iconName as any}
+          size={focused ? 24 : 22}
+          color={focused ? "#2563eb" : "#94a3b8"}
         />
       </View>
       {badge !== undefined && badge > 0 && (
@@ -127,10 +127,10 @@ export default function MainTabs() {
         options={{
           title: "Đơn hàng",
           tabBarIcon: ({ focused }) => (
-            <TabIcon 
-              name="cube-outline" 
-              focused={focused} 
-              color="" 
+            <TabIcon
+              name="cube-outline"
+              focused={focused}
+              color=""
               badge={pendingOrdersCount}
             />
           ),
@@ -162,10 +162,10 @@ export default function MainTabs() {
         options={{
           title: "Thông báo",
           tabBarIcon: ({ focused }) => (
-            <TabIcon 
-              name="notifications-outline" 
-              focused={focused} 
-              color="" 
+            <TabIcon
+              name="notifications-outline"
+              focused={focused}
+              color=""
               badge={unreadCount}
             />
           ),

@@ -60,18 +60,12 @@ export default function ProfileScreen({ navigation }: any) {
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
-      <ScrollView 
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        bounces={true}
-      >
-        {/* BACKGROUND DECORATION */}
-        <View style={styles.backgroundDecoration}>
-          <View style={styles.circle1} />
-          <View style={styles.circle2} />
-          <View style={styles.circle3} />
-        </View>
+      {/* BACKGROUND DECORATION */}
+      <View style={styles.backgroundDecoration}>
+        <View style={styles.circle1} />
+        <View style={styles.circle2} />
+        <View style={styles.circle3} />
+      </View>
 
         {/* PROFILE CARD */}
         <View style={styles.profileCard}>
@@ -174,21 +168,21 @@ export default function ProfileScreen({ navigation }: any) {
           </TouchableOpacity>
         </View>
 
-        {/* LOGOUT BUTTON */}
-        <TouchableOpacity 
-          style={styles.logoutButton} 
-          activeOpacity={0.8}
-          onPress={handleLogout}
+      {/* LOGOUT BUTTON */}
+      <TouchableOpacity 
+        style={styles.logoutButton} 
+        activeOpacity={0.8}
+        onPress={handleLogout}
+      >
+        <LinearGradient
+          colors={["#ef4444", "#dc2626"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={styles.logoutGradient}
         >
-          <LinearGradient
-            colors={["#ef4444", "#dc2626"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.logoutGradient}
-          >
-            <Text style={styles.logoutText}>Đăng xuất tài khoản</Text>
-          </LinearGradient>
-        </TouchableOpacity>
+          <Text style={styles.logoutText}>Đăng xuất tài khoản</Text>
+        </LinearGradient>
+      </TouchableOpacity>
 
         {/* VERSION INFO */}
         <Text style={styles.versionText}>Phiên bản 2.0.3.1</Text>
