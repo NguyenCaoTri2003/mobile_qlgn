@@ -234,7 +234,7 @@ export default function LoginScreen({ navigation }: any) {
                       </TouchableOpacity>
                     </View>
                   </View>
-{/* 
+                {/* 
                   <TouchableOpacity style={styles.forgotPassword}>
                     <Text style={styles.forgotPasswordText}>Quên mật khẩu?</Text>
                   </TouchableOpacity> */}
