@@ -22,7 +22,6 @@
     "axios": "^1.13.6",
     "buffer": "^6.0.3",
     "expo": "~55.0.5",
-    "expo-av": "^16.0.8",
     "expo-blur": "~55.0.14",
     "expo-dev-client": "~55.0.18",
     "expo-device": "~55.0.9",

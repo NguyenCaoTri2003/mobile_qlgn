@@ -7,6 +7,7 @@ import {
   Image,
   Alert,
   Dimensions,
+  ScrollView,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import LinearGradient from "react-native-linear-gradient";
@@ -59,132 +60,139 @@ export default function ProfileScreen({ navigation }: any) {
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
-      {/* BACKGROUND DECORATION */}
-      <View style={styles.backgroundDecoration}>
-        <View style={styles.circle1} />
-        <View style={styles.circle2} />
-        <View style={styles.circle3} />
-      </View>
-
-      {/* PROFILE CARD */}
-      <View style={styles.profileCard}>
-        {/* AVATAR SECTION */}
-        <View style={styles.avatarContainer}>
-          <LinearGradient
-            colors={["#667eea", "#764ba2", "#f093fb", "#f5576c"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.avatarGradient}
-          >
-            {user?.avatar ? (
-              <Image source={{ uri: user.avatar }} style={styles.avatarImage} />
-            ) : (
-              <View
-                style={[
-                  styles.avatarPlaceholder,
-                  { backgroundColor: avatarColor },
-                ]}
-              >
-                <Text style={styles.avatarInitial}>{firstLetter}</Text>
-              </View>
-            )}
-          </LinearGradient>
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        bounces={true}
+      >
+        {/* BACKGROUND DECORATION */}
+        <View style={styles.backgroundDecoration}>
+          <View style={styles.circle1} />
+          <View style={styles.circle2} />
+          <View style={styles.circle3} />
         </View>
 
-        {/* USER DETAILS */}
-        <View style={styles.userInfoContainer}>
-          <Text style={styles.userName}>{user?.name || "Người dùng"}</Text>
-          
-          <View style={styles.emailContainer}>
-            <EvilIcons name="envelope" size={16} color="#94a3b8" />
-            <Text style={styles.userEmail}>{user?.email || "Không có email"}</Text>
+        {/* PROFILE CARD */}
+        <View style={styles.profileCard}>
+          {/* AVATAR SECTION */}
+          <View style={styles.avatarContainer}>
+            <LinearGradient
+              colors={["#667eea", "#764ba2", "#f093fb", "#f5576c"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.avatarGradient}
+            >
+              {user?.avatar ? (
+                <Image source={{ uri: user.avatar }} style={styles.avatarImage} />
+              ) : (
+                <View
+                  style={[
+                    styles.avatarPlaceholder,
+                    { backgroundColor: avatarColor },
+                  ]}
+                >
+                  <Text style={styles.avatarInitial}>{firstLetter}</Text>
+                </View>
+              )}
+            </LinearGradient>
           </View>
 
+          {/* USER DETAILS */}
+          <View style={styles.userInfoContainer}>
+            <Text style={styles.userName}>{user?.name || "Người dùng"}</Text>
+            
+            <View style={styles.emailContainer}>
+              <EvilIcons name="envelope" size={16} color="#94a3b8" />
+              <Text style={styles.userEmail}>{user?.email || "Không có email"}</Text>
+            </View>
+
+            <LinearGradient
+              colors={["#667eea", "#764ba2"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.roleContainer}
+            >
+              <Text style={styles.roleLabel}>{user?.position || "Nhân viên"}</Text>
+            </LinearGradient>
+          </View>
+        </View>
+
+        {/* MENU SECTION */}
+        <View style={styles.menuContainer}>
+          <Text style={styles.menuHeader}>TÀI KHOẢN</Text>
+
+          <TouchableOpacity
+            style={styles.menuItem}
+            activeOpacity={0.6}
+            onPress={() => navigation.navigate("ProfileDetail")}
+          >
+            <View style={styles.menuItemLeft}>
+              <View style={[styles.iconContainer, { backgroundColor: "#e0e7ff" }]}>
+                <EvilIcons name="user" size={24} color="#4f46e5" />
+              </View>
+              <View style={styles.menuItemContent}>
+                <Text style={styles.menuItemTitle}>Thông tin cá nhân</Text>
+                <Text style={styles.menuItemSubtitle}>Xem và chỉnh sửa thông tin</Text>
+              </View>
+            </View>
+            <EvilIcons name="chevron-right" size={28} color="#cbd5e1" />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.menuItem}
+            activeOpacity={0.6}
+            onPress={() => navigation.navigate("ChangePassword")}
+          >
+            <View style={styles.menuItemLeft}>
+              <View style={[styles.iconContainer, { backgroundColor: "#f3e8ff" }]}>
+                <EvilIcons name="lock" size={24} color="#9333ea" />
+              </View>
+              <View style={styles.menuItemContent}>
+                <Text style={styles.menuItemTitle}>Bảo mật</Text>
+                <Text style={styles.menuItemSubtitle}>Đổi mật khẩu đăng nhập</Text>
+              </View>
+            </View>
+            <EvilIcons name="chevron-right" size={28} color="#cbd5e1" />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.menuItem, styles.menuItemLast]}
+            activeOpacity={0.6}
+            onPress={() => navigation.navigate("GuideScreen")}
+          >
+            <View style={styles.menuItemLeft}>
+              <View style={[styles.iconContainer, { backgroundColor: "#fef3c7" }]}>
+                <EvilIcons name="question" size={24} color="#d97706" />
+              </View>
+              <View style={styles.menuItemContent}>
+                <Text style={styles.menuItemTitle}>Hỗ trợ</Text>
+                <Text style={styles.menuItemSubtitle}>Hướng dẫn sử dụng ứng dụng</Text>
+              </View>
+            </View>
+            <EvilIcons name="chevron-right" size={28} color="#cbd5e1" />
+          </TouchableOpacity>
+        </View>
+
+        {/* LOGOUT BUTTON */}
+        <TouchableOpacity 
+          style={styles.logoutButton} 
+          activeOpacity={0.8}
+          onPress={handleLogout}
+        >
           <LinearGradient
-            colors={["#667eea", "#764ba2"]}
+            colors={["#ef4444", "#dc2626"]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
-            style={styles.roleContainer}
+            style={styles.logoutGradient}
           >
-            <Text style={styles.roleLabel}>{user?.position || "Nhân viên"}</Text>
+            <Text style={styles.logoutText}>Đăng xuất tài khoản</Text>
           </LinearGradient>
-        </View>
-      </View>
-
-      {/* MENU SECTION */}
-      <View style={styles.menuContainer}>
-        <Text style={styles.menuHeader}>TÀI KHOẢN</Text>
-
-        <TouchableOpacity
-          style={styles.menuItem}
-          activeOpacity={0.6}
-          onPress={() => navigation.navigate("ProfileDetail")}
-        >
-          <View style={styles.menuItemLeft}>
-            <View style={[styles.iconContainer, { backgroundColor: "#e0e7ff" }]}>
-              <EvilIcons name="user" size={24} color="#4f46e5" />
-            </View>
-            <View style={styles.menuItemContent}>
-              <Text style={styles.menuItemTitle}>Thông tin cá nhân</Text>
-              <Text style={styles.menuItemSubtitle}>Xem và chỉnh sửa thông tin</Text>
-            </View>
-          </View>
-          <EvilIcons name="chevron-right" size={28} If="#cbd5e1" />
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.menuItem}
-          activeOpacity={0.6}
-          onPress={() => navigation.navigate("ChangePassword")}
-        >
-          <View style={styles.menuItemLeft}>
-            <View style={[styles.iconContainer, { backgroundColor: "#f3e8ff" }]}>
-              <EvilIcons name="lock" size={24} color="#9333ea" />
-            </View>
-            <View style={styles.menuItemContent}>
-              <Text style={styles.menuItemTitle}>Bảo mật</Text>
-              <Text style={styles.menuItemSubtitle}>Đổi mật khẩu đăng nhập</Text>
-            </View>
-          </View>
-          <EvilIcons name="chevron-right" size={28} If="#cbd5e1" />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.menuItem, styles.menuItemLast]}
-          activeOpacity={0.6}
-          onPress={() => navigation.navigate("GuideScreen")}
-        >
-          <View style={styles.menuItemLeft}>
-            <View style={[styles.iconContainer, { backgroundColor: "#fef3c7" }]}>
-              <EvilIcons name="question" size={24} color="#d97706" />
-            </View>
-            <View style={styles.menuItemContent}>
-              <Text style={styles.menuItemTitle}>Hỗ trợ</Text>
-              <Text style={styles.menuItemSubtitle}>Hướng dẫn sử dụng ứng dụng</Text>
-            </View>
-          </View>
-          <EvilIcons name="chevron-right" size={28} If="#cbd5e1" />
-        </TouchableOpacity>
-      </View>
-
-      {/* LOGOUT BUTTON */}
-      <TouchableOpacity 
-        style={styles.logoutButton} 
-        activeOpacity={0.8}
-        onPress={handleLogout}
-      >
-        <LinearGradient
-          colors={["#ef4444", "#dc2626"]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={styles.logoutGradient}
-        >
-          <Text style={styles.logoutText}>Đăng xuất tài khoản</Text>
-        </LinearGradient>
-      </TouchableOpacity>
-
-      {/* VERSION INFO */}
-      <Text style={styles.versionText}>Phiên bản 2.0.3.1</Text>
+        {/* VERSION INFO */}
+        <Text style={styles.versionText}>Phiên bản 2.0.3.1</Text>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -193,6 +201,15 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#f8fafc",
+  },
+
+  scrollView: {
+    flex: 1,
+  },
+
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: 40,
   },
 
   // Background decoration
