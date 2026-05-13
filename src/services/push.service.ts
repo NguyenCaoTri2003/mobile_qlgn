@@ -7,7 +7,7 @@ import axiosClient from '../api/axiosClient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export async function registerForPushNotifications(userToken: string) {
-  if (!Device.isDevice) return;
+  // if (!Device.isDevice) return;
 
   const { status } = await Notifications.requestPermissionsAsync();
   if (status !== 'granted') return;
@@ -20,6 +20,7 @@ export async function registerForPushNotifications(userToken: string) {
 
   await axiosClient.post("/device/save-token", {
     token: token.data,
+    platform: 'mobile'
   });
 
   return token.data;

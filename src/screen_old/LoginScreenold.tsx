@@ -128,6 +128,14 @@ export default function LoginScreen({ navigation }: any) {
                   <Text style={styles.buttonText}>Đăng nhập</Text>
                 )}
               </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.demoBtn}
+                onPress={() => navigation.navigate("DemoScreen")}
+              >
+                <Text style={styles.demoText}>Xem Demo Thông Tin</Text>
+              </TouchableOpacity>
+
             </View>
             <Text style={styles.version}>Phiên bản hiện tại 2.0.3.1</Text>
           </View>
@@ -190,14 +198,17 @@ const styles = StyleSheet.create({
   },
 
   demoBtn: {
-    alignSelf: "flex-end",
+    alignSelf: "center",
     marginBottom: 14,
+    marginTop: 4,
+    padding: 8,
   },
 
   demoText: {
     color: "#2563eb",
     fontWeight: "500",
-    fontSize: 13,
+    fontSize: 14,
+    textDecorationLine: "underline",
   },
 
   button: {

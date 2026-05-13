@@ -131,7 +131,7 @@ export default function MainTabs() {
               name="cube-outline"
               focused={focused}
               color=""
-              badge={pendingOrdersCount}
+              // badge={pendingOrdersCount}
             />
           ),
           tabBarLabel: ({ focused }) => (

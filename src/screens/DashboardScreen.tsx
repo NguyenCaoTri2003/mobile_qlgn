@@ -21,6 +21,7 @@ import TodayOrdersCard from "../components/dashboard/TodayOrdersCard";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import useShipperStats from "../hooks/useShipperStats";
 import { Ionicons } from "@expo/vector-icons";
+import { settingService } from "../services/setting.service";
 
 const { width, height } = Dimensions.get("window");
 
@@ -90,6 +91,8 @@ export default function DashboardScreen({ navigation }: any) {
     };
   };
 
+  const [showDemoButton, setShowDemoButton] = useState(false);
+
   const parseDate = (str: string) => new Date(str);
 
   const toMonthString = (date: Date) => {
@@ -130,9 +133,22 @@ export default function DashboardScreen({ navigation }: any) {
     setSelectedYear(y);
   };
 
+  const loadSettings = async () => {
+    try {
+      const res = await settingService.getSystemSettingsApi();
+
+      const showDemo = res?.data?.show_demo_lookup === "1";
+
+      setShowDemoButton(showDemo);
+    } catch (err) {
+      console.log(err);
+    }
+  };
+
   useFocusEffect(
     useCallback(() => {
       resetFilter();
+      loadSettings();
 
       if (isNVGN) refreshToday();
     }, [isNVGN]),
@@ -430,7 +446,7 @@ export default function DashboardScreen({ navigation }: any) {
               }
             />
 
-            {/* {!isNVGN && (
+            {!isNVGN && !showDemoButton && (
               <StatCard
                 style={styles.card}
                 title="Chờ tiếp nhận"
@@ -450,7 +466,7 @@ export default function DashboardScreen({ navigation }: any) {
                   })
                 }
               />
-            )} */}
+            )}
 
             <StatCard
               style={styles.card}
@@ -472,84 +488,21 @@ export default function DashboardScreen({ navigation }: any) {
               }
             />
 
-            {/* <StatCard
-              style={styles.card}
-              title="Đang thực hiện"
-              value={stats?.processing}
-              loading={loading}
-              color="#d3cf01"
-              icon="time-outline"
-              onPress={() =>
-                navigation.navigate("Orders", {
-                  screen: "OrderList",
-                  params: {
-                    filter: "ALL",
-                    status: ["PROCESSING"],
-                    fromDashboard: true,
-                    refreshKey: Date.now(),
-                  },
-                })
-              }
-            />
-
-            {!isNVGN && (
-              <StatCard
-                style={styles.card}
-                title="Cần bổ sung"
-                value={stats?.supplement}
-                loading={loading}
-                color="#ffac13"
-                icon="alert-circle-outline"
-                onPress={() =>
-                  navigation.navigate("Orders", {
-                    screen: "OrderList",
-                    params: {
-                      filter: "ALL",
-                      status: ["SUPPLEMENT_REQUIRED"],
-                      fromDashboard: true,
-                      refreshKey: Date.now(),
-                    },
-                  })
-                }
-              />
-            )}
-
-            {isNVGN && (
-              <StatCard
-                style={styles.card}
-                title="Hoàn thành"
-                value={stats?.shipper_completed}
-                loading={loading}
-                color="#059669"
-                icon="checkmark-done-circle-outline"
-                onPress={() =>
-                  navigation.navigate("Orders", {
-                    screen: "OrderList",
-                    params: {
-                      filter: "DONE_GROUP",
-                      fromDashboard: true,
-                      refreshKey: Date.now(),
-                    },
-                  })
-                }
-              />
-            )}
-
-            {!isNVGN && (
+            {!showDemoButton && (
               <>
                 <StatCard
                   style={styles.card}
-                  title="Đã xong"
-                  value={stats?.completed}
+                  title="Đang thực hiện"
+                  value={stats?.processing}
                   loading={loading}
-                  color="#9333ea"
-                  icon="checkmark-circle-outline"
+                  color="#d3cf01"
+                  icon="time-outline"
                   onPress={() =>
                     navigation.navigate("Orders", {
                       screen: "OrderList",
                       params: {
                         filter: "ALL",
-                        status: ["COMPLETED"],
+                        status: ["PROCESSING"],
                         fromDashboard: true,
                         refreshKey: Date.now(),
                       },
@@ -557,127 +510,194 @@ export default function DashboardScreen({ navigation }: any) {
                   }
                 />
 
-                <StatCard
-                  style={styles.card}
-                  title="Hoàn tất"
-                  value={stats?.finished}
-                  loading={loading}
-                  color="#059669"
-                  icon="checkmark-done-circle-outline"
-                  onPress={() =>
-                    navigation.navigate("Orders", {
-                      screen: "OrderList",
-                      params: {
-                        filter: "ALL",
-                        status: ["FINISHED"],
-                        fromDashboard: true,
-                        refreshKey: Date.now(),
-                      },
-                    })
-                  }
-                />
+                {!isNVGN && (
+                  <StatCard
+                    style={styles.card}
+                    title="Cần bổ sung"
+                    value={stats?.supplement}
+                    loading={loading}
+                    color="#ffac13"
+                    icon="alert-circle-outline"
+                    onPress={() =>
+                      navigation.navigate("Orders", {
+                        screen: "OrderList",
+                        params: {
+                          filter: "ALL",
+                          status: ["SUPPLEMENT_REQUIRED"],
+                          fromDashboard: true,
+                          refreshKey: Date.now(),
+                        },
+                      })
+                    }
+                  />
+                )}
 
-                <StatCard
-                  style={styles.card}
-                  title="Từ chối"
-                  value={stats?.rejected}
-                  loading={loading}
-                  color="#6b7280"
-                  icon="close-circle-outline"
-                  onPress={() =>
-                    navigation.navigate("Orders", {
-                      screen: "OrderList",
-                      params: {
-                        filter: "ALL",
-                        status: ["REJECTED"],
-                        fromDashboard: true,
-                        refreshKey: Date.now(),
-                      },
-                    })
-                  }
-                />
+                {isNVGN && (
+                  <StatCard
+                    style={styles.card}
+                    title="Hoàn thành"
+                    value={stats?.shipper_completed}
+                    loading={loading}
+                    color="#059669"
+                    icon="checkmark-done-circle-outline"
+                    onPress={() =>
+                      navigation.navigate("Orders", {
+                        screen: "OrderList",
+                        params: {
+                          filter: "DONE_GROUP",
+                          fromDashboard: true,
+                          refreshKey: Date.now(),
+                        },
+                      })
+                    }
+                  />
+                )}
 
-                <StatCard
-                  style={styles.card}
-                  title="Hoàn đơn (khách hàng)"
-                  value={stats?.returned_customer}
-                  loading={loading}
-                  color="#ef4444"
-                  icon="arrow-undo-circle-outline"
-                  onPress={() =>
-                    navigation.navigate("Orders", {
-                      screen: "OrderList",
-                      params: {
-                        filter: "ALL",
-                        status: ["RETURNED_CUSTOMER"],
-                        fromDashboard: true,
-                        refreshKey: Date.now(),
-                      },
-                    })
-                  }
-                />
+                {!isNVGN && (
+                  <>
+                    <StatCard
+                      style={styles.card}
+                      title="Đã xong"
+                      value={stats?.completed}
+                      loading={loading}
+                      color="#9333ea"
+                      icon="checkmark-circle-outline"
+                      onPress={() =>
+                        navigation.navigate("Orders", {
+                          screen: "OrderList",
+                          params: {
+                            filter: "ALL",
+                            status: ["COMPLETED"],
+                            fromDashboard: true,
+                            refreshKey: Date.now(),
+                          },
+                        })
+                      }
+                    />
 
-                <StatCard
-                  style={styles.card}
-                  title="Hoàn đơn (cá nhân)"
-                  value={stats?.returned_personal}
-                  loading={loading}
-                  color="#6b7280"
-                  icon="arrow-undo-circle-outline"
-                  onPress={() =>
-                    navigation.navigate("Orders", {
-                      screen: "OrderList",
-                      params: {
-                        filter: "ALL",
-                        status: ["RETURNED_PERSONAL"],
-                        fromDashboard: true,
-                        refreshKey: Date.now(),
-                      },
-                    })
-                  }
-                />
+                    <StatCard
+                      style={styles.card}
+                      title="Hoàn tất"
+                      value={stats?.finished}
+                      loading={loading}
+                      color="#059669"
+                      icon="checkmark-done-circle-outline"
+                      onPress={() =>
+                        navigation.navigate("Orders", {
+                          screen: "OrderList",
+                          params: {
+                            filter: "ALL",
+                            status: ["FINISHED"],
+                            fromDashboard: true,
+                            refreshKey: Date.now(),
+                          },
+                        })
+                      }
+                    />
 
-                <StatCard
-                  style={styles.card}
-                  title="Đã lưu trữ"
-                  value={stats?.archived}
-                  loading={loading}
-                  color="#50555e"
-                  icon="archive-outline"
-                  onPress={() =>
-                    navigation.navigate("Orders", {
-                      screen: "OrderList",
-                      params: {
-                        filter: "ALL",
-                        status: ["ARCHIVED"],
-                        fromDashboard: true,
-                        refreshKey: Date.now(),
-                      },
-                    })
-                  }
-                />
+                    <StatCard
+                      style={styles.card}
+                      title="Từ chối"
+                      value={stats?.rejected}
+                      loading={loading}
+                      color="#6b7280"
+                      icon="close-circle-outline"
+                      onPress={() =>
+                        navigation.navigate("Orders", {
+                          screen: "OrderList",
+                          params: {
+                            filter: "ALL",
+                            status: ["REJECTED"],
+                            fromDashboard: true,
+                            refreshKey: Date.now(),
+                          },
+                        })
+                      }
+                    />
 
-                <StatCard
-                  style={styles.card}
-                  title="Chưa hoàn thành"
-                  value={stats?.incomplete}
-                  loading={loading}
-                  color="#ec4899"
-                  icon="warning-outline"
-                  onPress={() =>
-                    navigation.navigate("Orders", {
-                      screen: "OrderList",
-                      params: {
-                        filter: "ALL",
-                        status: ["INCOMPLETE"],
-                        fromDashboard: true,
-                        refreshKey: Date.now(),
-                      },
-                    })
-                  }
-                />
+                    <StatCard
+                      style={styles.card}
+                      title="Hoàn đơn (khách hàng)"
+                      value={stats?.returned_customer}
+                      loading={loading}
+                      color="#ef4444"
+                      icon="arrow-undo-circle-outline"
+                      onPress={() =>
+                        navigation.navigate("Orders", {
+                          screen: "OrderList",
+                          params: {
+                            filter: "ALL",
+                            status: ["RETURNED_CUSTOMER"],
+                            fromDashboard: true,
+                            refreshKey: Date.now(),
+                          },
+                        })
+                      }
+                    />
+
+                    <StatCard
+                      style={styles.card}
+                      title="Hoàn đơn (cá nhân)"
+                      value={stats?.returned_personal}
+                      loading={loading}
+                      color="#6b7280"
+                      icon="arrow-undo-circle-outline"
+                      onPress={() =>
+                        navigation.navigate("Orders", {
+                          screen: "OrderList",
+                          params: {
+                            filter: "ALL",
+                            status: ["RETURNED_PERSONAL"],
+                            fromDashboard: true,
+                            refreshKey: Date.now(),
+                          },
+                        })
+                      }
+                    />
+
+                    <StatCard
+                      style={styles.card}
+                      title="Đã lưu trữ"
+                      value={stats?.archived}
+                      loading={loading}
+                      color="#50555e"
+                      icon="archive-outline"
+                      onPress={() =>
+                        navigation.navigate("Orders", {
+                          screen: "OrderList",
+                          params: {
+                            filter: "ALL",
+                            status: ["ARCHIVED"],
+                            fromDashboard: true,
+                            refreshKey: Date.now(),
+                          },
+                        })
+                      }
+                    />
+
+                    <StatCard
+                      style={styles.card}
+                      title="Chưa hoàn thành"
+                      value={stats?.incomplete}
+                      loading={loading}
+                      color="#ec4899"
+                      icon="warning-outline"
+                      onPress={() =>
+                        navigation.navigate("Orders", {
+                          screen: "OrderList",
+                          params: {
+                            filter: "ALL",
+                            status: ["INCOMPLETE"],
+                            fromDashboard: true,
+                            refreshKey: Date.now(),
+                          },
+                        })
+                      }
+                    />
+                  </>
+                )}
               </>
-            )} */}
+            )}
           </View>
 
           {(user?.role === "QL" || user?.role === "SUPERADMIN") && (
@@ -829,30 +849,32 @@ export default function DashboardScreen({ navigation }: any) {
           )}
 
           {/* DEPARTMENT */}
-          {/* <View style={styles.deptBox}>
-            <Text style={styles.sectionTitle}>📊 Thống kê bộ phận</Text>
+          {!showDemoButton && (
+            <View style={styles.deptBox}>
+              <Text style={styles.sectionTitle}>📊 Thống kê bộ phận</Text>
 
-            <DeptBar
-              name="Visa Việt Nam"
-              count={stats?.vsvn}
-              total={stats?.total}
-              color="#3b82f6"
-            />
+              <DeptBar
+                name="Visa Việt Nam"
+                count={stats?.vsvn}
+                total={stats?.total}
+                color="#3b82f6"
+              />
 
-            <DeptBar
-              name="Visa Nước Ngoài"
-              count={stats?.vsnn}
-              total={stats?.total}
-              color="#8b5cf6"
-            />
+              <DeptBar
+                name="Visa Nước Ngoài"
+                count={stats?.vsnn}
+                total={stats?.total}
+                color="#8b5cf6"
+              />
 
-            <DeptBar
-              name="Giấy Phép Lao Động"
-              count={stats?.gpld}
-              total={stats?.total}
-              color="#14b8a6"
-            />
-          </View> */}
+              <DeptBar
+                name="Giấy Phép Lao Động"
+                count={stats?.gpld}
+                total={stats?.total}
+                color="#14b8a6"
+              />
+            </View>
+          )}
         </ScrollView>
       </SafeAreaView>
     </View>

@@ -85,6 +85,9 @@ export default function OrderListScreen({ navigation, route }: any) {
 
   const [selectedOrders, setSelectedOrders] = useState<number[]>([]);
   const isQL = user?.role === "QL";
+
+  const isMyOrder = filter === "MY_ORDERS_TODAY" || filter === "MY_ORDERS_ALL";
+
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [shippers, setShippers] = useState<any[]>([]);
   const [selectedShipper, setSelectedShipper] = useState<any>(null);
@@ -101,13 +104,14 @@ export default function OrderListScreen({ navigation, route }: any) {
   });
 
   const filterRef = useRef({
-    search: '',
-    deptFilter: '',
-    filter: 'ALL',
+    search: "",
+    deptFilter: "",
+    filter: "ALL",
     dateFilter: null as string | null,
-    timeFilter: '',
+    timeFilter: "",
     statusFilter: [] as string[],
-    orderTypeFilter: ''
+    orderTypeFilter: "",
+
   });
 
   useEffect(() => {
@@ -417,6 +421,8 @@ export default function OrderListScreen({ navigation, route }: any) {
       { key: "TODAY", label: "Giao nhận hôm nay" },
       { key: "PENDING_GROUP", label: "Cần xử lý" },
       { key: "DONE_GROUP", label: "Hoàn tất" },
+      { key: "MY_ORDERS_TODAY", label: "Đơn của tôi hôm nay" },
+      { key: "MY_ORDERS_ALL", label: "Đơn của tôi" },
     ];
 
     if (user?.role === "NVGN") {
@@ -424,6 +430,17 @@ export default function OrderListScreen({ navigation, route }: any) {
         baseTabs.find((t) => t.key === "TODAY"),
         baseTabs.find((t) => t.key === "ALL"),
         baseTabs.find((t) => t.key === "PENDING_GROUP"),
+        baseTabs.find((t) => t.key === "DONE_GROUP"),
+      ].filter(Boolean);
+    }
+
+    if (user?.role === "QL") {
+      return [
+        baseTabs.find((t) => t.key === "ALL"),
+        baseTabs.find((t) => t.key === "TODAY"),
+        baseTabs.find((t) => t.key === "PENDING_GROUP"),
+        baseTabs.find((t) => t.key === "MY_ORDERS_TODAY"),
+        baseTabs.find((t) => t.key === "MY_ORDERS_ALL"),
         baseTabs.find((t) => t.key === "DONE_GROUP"),
       ].filter(Boolean);
     }
@@ -880,7 +897,7 @@ export default function OrderListScreen({ navigation, route }: any) {
         delayLongPress={canDrag ? 200 : 999999}
         onPress={() => openDetail(item)}
       >
-        {isQL && (
+        {isQL && !isMyOrder && (
           <TouchableOpacity
             style={styles.checkbox}
             onPress={() => toggleSelect(item)}
@@ -905,7 +922,8 @@ export default function OrderListScreen({ navigation, route }: any) {
         <View style={styles.cardHeader}>
           <View style={{ flex: 1 }}>
             <Text
-              style={[styles.orderCode, isQL && { marginLeft: 28 }]}
+              style={[styles.orderCode, isQL && !isMyOrder && { marginLeft: 28 }]}
+
               numberOfLines={1}
               ellipsizeMode="tail"
             >
@@ -1181,7 +1199,7 @@ export default function OrderListScreen({ navigation, route }: any) {
         </View>
       )}
 
-      <ScrollView
+      {/* <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.tabs}
@@ -1212,13 +1230,102 @@ export default function OrderListScreen({ navigation, route }: any) {
                     {pendingOrdersCount > 99 ? "99+" : pendingOrdersCount}
                   </Text>
                 </View>
-              )} */}
+              )} 
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView> */}
+
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.tabs}
+        style={{
+          flexGrow: 0,
+          height: 40,
+        }}
+      >
+        {tabs.map((tab) => {
+          if (!tab) return null;
+
+          const isActive = filter === tab.key;
+
+          const getTabStyle = () => {
+            const baseStyle = {
+              backgroundColor: '#F3F4F6', 
+              borderWidth: 1,
+              borderColor: '#E5E7EB',
+            };
+            const activeStyle = {
+              borderWidth: 0,       
+              shadowColor: "transparent",
+              elevation: 0,
+            };
+
+            switch (tab.key) {
+              case 'ALL':
+                return isActive
+                  ? { ...activeStyle, backgroundColor: '#7C3AED' } 
+                  : { ...baseStyle, backgroundColor: '#F5F3FF', borderColor: '#DDD6FE' }; 
+              case 'TODAY':
+                return isActive
+                  ? { ...activeStyle, backgroundColor: '#2563EB' } 
+                  : { ...baseStyle, backgroundColor: '#EFF6FF', borderColor: '#BFDBFE' }; 
+              case 'PENDING_GROUP':
+                return isActive
+                  ? { ...activeStyle, backgroundColor: '#EA580C' } 
+                  : { ...baseStyle, backgroundColor: '#FFF7ED', borderColor: '#FED7AA' }; 
+              case 'DONE_GROUP':
+                return isActive
+                  ? { ...activeStyle, backgroundColor: '#059669' } 
+                  : { ...baseStyle, backgroundColor: '#ECFDF5', borderColor: '#A7F3D0' }; 
+              case 'MY_ORDERS_TODAY':
+                return isActive
+                  ? { ...activeStyle, backgroundColor: '#0891B2' } 
+                  : { ...baseStyle, backgroundColor: '#F0FDFA', borderColor: '#99F6E4' };
+              case 'MY_ORDERS_ALL':
+                return isActive
+                  ? { ...activeStyle, backgroundColor: '#D97706' } // Vàng nâu đậm
+                  : { ...baseStyle, backgroundColor: '#FFFBEB', borderColor: '#FDE68A' }; 
+              default:
+                return baseStyle;
+            }
+          };
+
+          const getTabTextStyle = () => {
+            if (isActive) return styles.tabTextActive; 
+            switch (tab.key) {
+              case 'ALL': return { color: '#6D28D9' };
+              case 'TODAY': return { color: '#1D4ED8' };
+              case 'PENDING_GROUP': return { color: '#C2410C' };
+              case 'DONE_GROUP': return { color: '#047857' };
+              case 'MY_ORDERS_TODAY': return { color: '#0E7490' };
+              case 'MY_ORDERS_ALL': return { color: '#B45309' };
+              default: return { color: '#374151' };
+            }
+          };
+
+          return (
+            <TouchableOpacity
+              key={tab.key}
+              style={[
+                styles.tab,
+                getTabStyle(), 
+                // isActive && styles.tabActive, 
+              ]}
+              onPress={() => setFilter(tab.key)}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.tabText, getTabTextStyle()]}>
+                {tab.label}
+              </Text>
+
             </TouchableOpacity>
           );
         })}
       </ScrollView>
 
-      {isQL && pendingCount > 0 && (
+      {isQL && !isMyOrder && pendingCount > 0 && (
         <View style={styles.selectAllWrapper}>
           <TouchableOpacity onPress={toggleAll} style={styles.selectAll}>
             <Ionicons
@@ -1286,7 +1393,7 @@ export default function OrderListScreen({ navigation, route }: any) {
 
               if (isFiltering) {
                 return <EmptyState type="search" />;
-              } else if (filter === "TODAY" && user?.role === "NVGN") {
+              } else if (filter === "TODAY" || filter === "MY_ORDERS_TODAY") {
                 return (
                   <EmptyState type="today" onAction={() => setFilter("ALL")} />
                 );
@@ -1556,7 +1663,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 20,
-    backgroundColor: "#f3f4f6",
+    // backgroundColor: "#f3f4f6",
     position: "relative",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
@@ -1567,8 +1674,9 @@ const styles = StyleSheet.create({
   },
 
   tabActive: {
-    backgroundColor: "#2563eb",
-    shadowColor: "#2563eb",
+    // backgroundColor: "#2563eb",
+    // shadowColor: "#2563eb",
+    shadowColor: "#000",
     shadowOpacity: 0.25,
     shadowRadius: 6,
     elevation: 4,
@@ -1576,7 +1684,7 @@ const styles = StyleSheet.create({
   },
 
   tabText: {
-    color: "#374151",
+    // color: "#374151",
     fontWeight: "500",
     fontSize: 12,
   },

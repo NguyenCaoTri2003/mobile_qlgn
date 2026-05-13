@@ -11,7 +11,7 @@ import { LinearGradient } from "expo-linear-gradient";
 
 export default function NotificationCard({ item, onPress, index }: any) {
   const scale = useRef(new Animated.Value(1)).current;
-  const translateY = useRef(new Animated.Value(50)).current;
+  const translateY = useRef(new Animated.Value(40)).current;
   const opacity = useRef(new Animated.Value(0)).current;
   
   const isUnread = item.read_status === 0;
@@ -20,13 +20,13 @@ export default function NotificationCard({ item, onPress, index }: any) {
     Animated.parallel([
       Animated.spring(translateY, {
         toValue: 0,
-        delay: index * 50,
+        delay: index * 40,
         useNativeDriver: true,
       }),
       Animated.timing(opacity, {
         toValue: 1,
-        duration: 300,
-        delay: index * 50,
+        duration: 250,
+        delay: index * 40,
         useNativeDriver: true,
       }),
     ]).start();
@@ -106,7 +106,7 @@ export default function NotificationCard({ item, onPress, index }: any) {
           >
             <Ionicons
               name={getNotificationIcon()}
-              size={22}
+              size={18}
               color={isUnread ? "#FFFFFF" : "#94A3B8"}
             />
           </LinearGradient>
@@ -147,7 +147,7 @@ export default function NotificationCard({ item, onPress, index }: any) {
             <View style={styles.timeContainer}>
               <Ionicons 
                 name="time-outline" 
-                size={12} 
+                size={10} 
                 color={isUnread ? "#3B82F6" : "#94A3B8"} 
               />
               <Text style={[styles.time, isUnread && styles.timeUnread]}>
@@ -164,7 +164,7 @@ export default function NotificationCard({ item, onPress, index }: any) {
         ]}>
           <Ionicons 
             name="chevron-forward" 
-            size={18} 
+            size={14} 
             color={isUnread ? "#3B82F6" : "#CBD5E1"} 
           />
         </View>
@@ -175,34 +175,34 @@ export default function NotificationCard({ item, onPress, index }: any) {
 
 const styles = StyleSheet.create({
   pressableContainer: {
-    marginHorizontal: 16,
-    marginVertical: 4,
+    marginHorizontal: 12,
+    marginVertical: 3,
   },
   
   card: {
     flexDirection: "row",
-    padding: 14,
+    padding: 12,
     backgroundColor: "#FFFFFF",
-    borderRadius: 16,
+    borderRadius: 12,
     alignItems: "center",
     borderWidth: 1,
     borderColor: "#F1F5F9",
     shadowColor: "#0F172A",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 4,
+    elevation: 1,
     position: "relative",
     overflow: "hidden",
   },
   
   cardUnread: {
-    backgroundColor: "#EFF6FF", // Xanh dương nhạt
+    backgroundColor: "#EFF6FF",
     borderColor: "#BFDBFE",
     shadowColor: "#3B82F6",
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 4,
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 3,
   },
   
   // Unread left border indicator - Gradient
@@ -211,61 +211,61 @@ const styles = StyleSheet.create({
     left: 0,
     top: 0,
     bottom: 0,
-    width: 5,
+    width: 4,
   },
   
   // Icon Styles
   iconWrapper: {
     position: "relative",
-    marginRight: 14,
+    marginRight: 12,
   },
   iconGradient: {
-    width: 50,
-    height: 50,
-    borderRadius: 15,
+    width: 42,
+    height: 42,
+    borderRadius: 12,
     justifyContent: "center",
     alignItems: "center",
     shadowColor: "#3B82F6",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+    elevation: 1,
   },
   unreadIndicator: {
     position: "absolute",
-    top: -3,
-    right: -3,
-    width: 14,
-    height: 14,
-    borderRadius: 7,
+    top: -2,
+    right: -2,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
     backgroundColor: "#FFFFFF",
     justifyContent: "center",
     alignItems: "center",
   },
   unreadIndicatorInner: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
     backgroundColor: "#3B82F6",
   },
   
   // Content Styles
   contentContainer: {
     flex: 1,
-    marginRight: 8,
+    marginRight: 6,
   },
   
   messageRow: {
     flexDirection: "row",
     alignItems: "flex-start",
-    marginBottom: 6,
-    gap: 8,
+    marginBottom: 4,
+    gap: 6,
   },
   
   message: {
     flex: 1,
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 13,
+    lineHeight: 18,
     color: "#475569",
   },
   
@@ -275,38 +275,38 @@ const styles = StyleSheet.create({
   },
   
   newBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 14,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
     shadowColor: "#3B82F6",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
+    elevation: 1,
   },
   
   newBadgeText: {
     color: "#FFFFFF",
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: "700",
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
   },
   
   // Meta Row
   metaRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    gap: 8,
   },
   
   timeContainer: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    gap: 3,
   },
   
   time: {
-    fontSize: 12,
+    fontSize: 11,
     color: "#94A3B8",
     fontWeight: "500",
   },
@@ -316,27 +316,11 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   
-  orderContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    backgroundColor: "#F8FAFC",
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-  
-  orderId: {
-    fontSize: 12,
-    color: "#64748B",
-    fontWeight: "500",
-  },
-  
   // Chevron
   chevronContainer: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
     backgroundColor: "#F8FAFC",
     justifyContent: "center",
     alignItems: "center",

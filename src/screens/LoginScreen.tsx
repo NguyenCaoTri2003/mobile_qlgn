@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -18,6 +19,7 @@ import { Image } from "react-native";
 import { loginApi } from "../api/auth.api";
 import { saveUser } from "../store/auth.store";
 import { useAuth } from "../contexts/AuthContext";
+import { settingService } from "../services/setting.service";
 
 export default function LoginScreen({ navigation }: any) {
   const [email, setEmail] = useState("");
@@ -26,6 +28,8 @@ export default function LoginScreen({ navigation }: any) {
   const [showPass, setShowPass] = useState(false);
   const { setUser, reloadUser } = useAuth();
   const [loading, setLoading] = useState(false);
+
+  const [showDemoButton, setShowDemoButton] = useState(false);
 
   const onLogin = async () => {
     if (!email || !password) {
@@ -58,6 +62,23 @@ export default function LoginScreen({ navigation }: any) {
       setLoading(false); // luôn tắt loading
     }
   };
+
+  useEffect(() => {
+    loadSettings();
+  }, []);
+
+  const loadSettings = async () => {
+    try {
+      const res = await settingService.getSystemSettingsApi();
+
+      const showDemo = res?.data?.show_demo_lookup === "1";
+
+      setShowDemoButton(showDemo);
+    } catch (err) {
+      console.log(err);
+    }
+  };
+
   
   return (
     <KeyboardAvoidingView
@@ -114,7 +135,6 @@ export default function LoginScreen({ navigation }: any) {
                   />
                 </TouchableOpacity>
               </View>
-            
 
               {/* LOGIN BUTTON */}
               <TouchableOpacity
@@ -128,13 +148,15 @@ export default function LoginScreen({ navigation }: any) {
                   <Text style={styles.buttonText}>Đăng nhập</Text>
                 )}
               </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.demoBtn}
-                onPress={() => navigation.navigate("DemoScreen")}
-              >
-                <Text style={styles.demoText}>Tra cứu đơn</Text>
-              </TouchableOpacity>
+              
+              {showDemoButton && (
+                <TouchableOpacity
+                  style={styles.demoBtn}
+                  onPress={() => navigation.navigate("DemoScreen")}
+                >
+                  <Text style={styles.demoText}>Tra cứu đơn</Text>
+                </TouchableOpacity>
+              )}
 
             </View>
             <Text style={styles.version}>Phiên bản hiện tại 1.1.4</Text>

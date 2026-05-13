@@ -22,3 +22,19 @@ export const removeDeviceToken = async (token: string) => {
     }
   );
 };
+
+export const removeAllDeviceTokens = async () => {
+  const accessToken = await AsyncStorage.getItem("access_token");
+
+  if (!accessToken) return;
+
+  return axios.post(
+    `${API_URL}/device/remove-all-tokens`,
+    { platform: 'mobile' }, // Chỉ xóa token mobile, giữ web nếu có
+    {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    }
+  );
+};

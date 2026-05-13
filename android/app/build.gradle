@@ -104,6 +104,14 @@ android {
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
+
+        release 
+        {
+            storeFile file("nguyencaotri2k3__nhi-gia-logistics.jks")
+            storePassword "cad4be8d53bf0dc1608345d017d4ff5c"
+            keyAlias "b7c2eba38c364f21c56e8eaa5490cf6e"
+            keyPassword "90f24e279bced55f5dae0c2e979bdc85"
+        }
     }
     buildTypes {
         debug {
@@ -112,7 +120,7 @@ android {
         release {
             // Caution! In production, you need to generate your own keystore file.
             // see https://reactnative.dev/docs/signed-apk-android.
-            signingConfig signingConfigs.debug
+            signingConfig signingConfigs.release
             def enableShrinkResources = findProperty('android.enableShrinkResourcesInReleaseBuilds') ?: 'false'
             shrinkResources enableShrinkResources.toBoolean()
             minifyEnabled enableMinifyInReleaseBuilds
@@ -125,6 +133,8 @@ android {
         jniLibs {
             def enableLegacyPackaging = findProperty('expo.useLegacyPackaging') ?: 'false'
             useLegacyPackaging enableLegacyPackaging.toBoolean()
+
+            pickFirsts += ['**/libworklets.so']
         }
     }
     androidResources {

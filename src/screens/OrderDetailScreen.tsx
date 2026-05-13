@@ -55,6 +55,11 @@ import * as Print from "expo-print";
 import { buildOrderHTML } from "../templates/buildOrderHTML";
 import ImagePreviewModal from "../components/ImagePreviewModal";
 import { Buffer } from "buffer";
+import { LinearGradient } from "expo-linear-gradient";
+import {
+  sendCurrentLocationOnce,
+  startTracking,
+} from "../services/location-tracking.service";
 // import { Audio, AVPlaybackStatus } from "expo-av";
 
 type NavigationType = NativeStackNavigationProp<
@@ -103,6 +108,8 @@ export default function OrderDetailScreen({ route }: any) {
   );
   const [durationMap, setDurationMap] = useState<Record<number, string>>({});
   // const [sound, setSound] = useState<Audio.Sound | null>(null);
+
+  const [acceptLoading, setAcceptLoading] = useState(false);
 
   const [notify, setNotify] = useState({
     visible: false,
@@ -326,6 +333,10 @@ export default function OrderDetailScreen({ route }: any) {
   };
 
   const handleAcceptPress = () => {
+    if (acceptLoading) return;
+
+    setAcceptLoading(true);
+
     if (isPickup) {
       handleAcceptPick();
     } else {
@@ -344,6 +355,10 @@ export default function OrderDetailScreen({ route }: any) {
 
     try {
       await orderService.shipperAccept(id, attachments, "");
+
+      // await sendCurrentLocationOnce(id);
+
+      // await startTracking(id);
 
       setNotify({
         visible: true,
@@ -366,6 +381,9 @@ export default function OrderDetailScreen({ route }: any) {
   const handleAcceptPick = async () => {
     try {
       await orderService.shipperAcceptPick(id);
+
+      // await startTracking(id);
+
       setNotify({
         visible: true,
         type: "success",
@@ -786,9 +804,7 @@ export default function OrderDetailScreen({ route }: any) {
     );
   }
 
-  const isQLAssign =
-    user?.role === "QL" &&
-    (order?.status === "PENDING");
+  const isQLAssign = user?.role === "QL" && order?.status === "PENDING";
 
   const isQLReturned =
     user?.role === "QL" &&
@@ -840,11 +856,17 @@ export default function OrderDetailScreen({ route }: any) {
     order.status,
   );
 
+  // const shipperOptions = shippers.map((s) => ({
+  //   label:
+  //     s.stats?.active_orders > 0
+  //       ? `${s.name} 🔴 ${s.stats.active_orders} đơn`
+  //       : `${s.name} 🟢 Rảnh`,
+  //   value: s.id,
+  // }));
+
   const shipperOptions = shippers.map((s) => ({
-    label:
-      s.stats?.active_orders > 0
-        ? `${s.name} 🔴 ${s.stats.active_orders} đơn`
-        : `${s.name} 🟢 Rảnh`,
+    name: s.name,
+    activeOrders: s.stats?.active_orders || 0,
     value: s.id,
   }));
 
@@ -853,7 +875,7 @@ export default function OrderDetailScreen({ route }: any) {
   return (
     <SafeAreaView style={styles.container} edges={["left", "right"]}>
       <ScrollView
-        contentContainerStyle={{ paddingBottom: 10 }}
+        contentContainerStyle={{ paddingBottom: 8 }}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
@@ -972,7 +994,7 @@ export default function OrderDetailScreen({ route }: any) {
             <View style={styles.creatorHeader}>
               <Ionicons
                 name="person-circle-outline"
-                size={18}
+                size={14}
                 color="#2563eb"
               />
               <Text style={styles.creatorLabel}>Người yêu cầu</Text>
@@ -1013,9 +1035,9 @@ export default function OrderDetailScreen({ route }: any) {
         {order.adminResponse && (
           <View style={styles.alertGreen}>
             <View
-              style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
+              style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
             >
-              <Ionicons name="checkmark-circle" size={16} color="#16a34a" />
+              <Ionicons name="checkmark-circle" size={12} color="#16a34a" />
               <Text style={styles.alertGreenText}>{order.adminResponse}</Text>
             </View>
           </View>
@@ -1028,19 +1050,19 @@ export default function OrderDetailScreen({ route }: any) {
           <Text style={styles.company}>{order.company}</Text>
 
           <TouchableOpacity style={styles.row} onPress={call}>
-            <Ionicons name="call-outline" size={18} color="#2563eb" />
+            <Ionicons name="call-outline" size={14} color="#2563eb" />
             <Text style={styles.link}>
               {order.phone || "Không có số điện thoại"}
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.row} onPress={openMap}>
-            <Ionicons name="location-outline" size={18} color="#2563eb" />
+            <Ionicons name="location-outline" size={14} color="#2563eb" />
             <Text style={styles.link}>{order.address}</Text>
           </TouchableOpacity>
 
           <View style={styles.row}>
-            <Ionicons name="person-outline" size={18} color="#6b7280" />
+            <Ionicons name="person-outline" size={14} color="#6b7280" />
             <Text style={styles.value}>
               {order.contact || "Không có người liên hệ"}
             </Text>
@@ -1062,7 +1084,7 @@ export default function OrderDetailScreen({ route }: any) {
           >
             <Ionicons
               name="time-outline"
-              size={16}
+              size={12}
               color={deliveryStyle.icon}
             />
 
@@ -1160,7 +1182,7 @@ export default function OrderDetailScreen({ route }: any) {
             <View style={styles.assignedHeader}>
               <Ionicons
                 name="person-circle-outline"
-                size={18}
+                size={14}
                 color="#2563eb"
               />
               <Text style={styles.assignedLabel}>Nhân viên giao nhận</Text>
@@ -1208,7 +1230,7 @@ export default function OrderDetailScreen({ route }: any) {
                 >
                   <Ionicons
                     name={a.checked ? "checkbox" : "square-outline"}
-                    size={22}
+                    size={18}
                     color={
                       !isChecklistActive()
                         ? "#d1d5db"
@@ -1262,7 +1284,7 @@ export default function OrderDetailScreen({ route }: any) {
                                 ? "information-circle"
                                 : "information-circle-outline"
                             }
-                            size={16}
+                            size={12}
                             color={"#f97316"}
                           />
 
@@ -1301,7 +1323,7 @@ export default function OrderDetailScreen({ route }: any) {
         {(order.status === "COMPLETED" || order.status === "FINISHED") && (
           <View style={styles.card}>
             <View style={styles.headerRow}>
-              <Ionicons name="checkmark-circle" size={18} color="#16a34a" />
+              <Ionicons name="checkmark-circle" size={14} color="#16a34a" />
               <Text style={styles.cardTitleSuccess}>Thông tin hoàn tất</Text>
             </View>
             {order.status === "COMPLETED" && (
@@ -1355,7 +1377,7 @@ export default function OrderDetailScreen({ route }: any) {
                   )
                 }
               >
-                <Ionicons name="location-outline" size={18} color="#2563eb" />
+                <Ionicons name="location-outline" size={14} color="#2563eb" />
                 <Text style={styles.link}>Xem vị trí giao</Text>
               </TouchableOpacity>
             )}
@@ -1428,7 +1450,7 @@ export default function OrderDetailScreen({ route }: any) {
           order.status === "RETURNED_PERSONAL") && (
           <View style={[styles.card, { backgroundColor: "#fef2f2" }]}>
             <View style={styles.headerRow}>
-              <Ionicons name="remove-circle" size={18} color="#dc2626" />
+              <Ionicons name="remove-circle" size={14} color="#dc2626" />
               <Text style={styles.returnTitle}>Thông tin hoàn trả</Text>
             </View>
 
@@ -1466,7 +1488,7 @@ export default function OrderDetailScreen({ route }: any) {
                   )
                 }
               >
-                <Ionicons name="location-outline" size={18} color="#dc2626" />
+                <Ionicons name="location-outline" size={14} color="#dc2626" />
                 <Text style={[styles.link, { color: "#dc2626" }]}>
                   Xem vị trí hoàn trả
                 </Text>
@@ -1509,7 +1531,7 @@ export default function OrderDetailScreen({ route }: any) {
                           ? "document-text"
                           : "document"
                       }
-                      size={28}
+                      size={22}
                       color="#6b7280"
                     />
                   )}
@@ -1522,7 +1544,7 @@ export default function OrderDetailScreen({ route }: any) {
                   </View>
                 </View>
 
-                <Ionicons name="download-outline" size={20} color="#2563eb" />
+                <Ionicons name="download-outline" size={16} color="#2563eb" />
               </TouchableOpacity>
             ))}
           </View>
@@ -1556,23 +1578,73 @@ export default function OrderDetailScreen({ route }: any) {
         >
           {isQLAssign && (
             <View style={styles.card}>
-              <Text style={styles.cardTitle}>Xử lý đơn</Text>
+              <View style={styles.cardHeader}>
+                <Ionicons name="git-branch-outline" size={18} color="#3B82F6" />
+                <Text style={styles.cardTitle}>Xử lý đơn</Text>
+              </View>
 
-              <Text style={styles.smallLabel}>Chọn nhân viên giao nhận</Text>
+              <View style={styles.sectionHeader}>
+                <Ionicons name="people-outline" size={16} color="#64748B" />
+                <Text style={styles.smallLabel}>Chọn nhân viên giao nhận</Text>
+              </View>
 
               <Dropdown
                 style={styles.dropdown}
                 containerStyle={styles.dropdownContainer}
+                itemContainerStyle={styles.dropdownItemContainer}
                 dropdownPosition="top"
                 maxHeight={250}
-                placeholderStyle={styles.dropdownPlaceholder}
-                selectedTextStyle={styles.dropdownSelected}
                 data={shipperOptions}
-                labelField="label"
+                labelField="name"
                 valueField="value"
                 placeholder="Chọn nhân viên giao nhận"
+                placeholderStyle={styles.dropdownPlaceholder}
+                selectedTextStyle={styles.dropdownSelected}
                 value={selectedShipper}
                 onChange={(item) => setSelectedShipper(item.value)}
+                renderLeftIcon={() => (
+                  <Ionicons
+                    name="person-outline"
+                    size={16}
+                    color={selectedShipper ? "#3B82F6" : "#94A3B8"}
+                    style={{ marginRight: 8 }}
+                  />
+                )}
+                renderItem={(item) => (
+                  <View style={styles.itemRow}>
+                    <View style={styles.itemLeft}>
+                      <View>
+                        <Text style={styles.itemName}>{item.name}</Text>
+                      </View>
+                    </View>
+
+                    <View style={styles.itemRight}>
+                      {item.activeOrders > 0 ? (
+                        <View style={styles.busyBadge}>
+                          <View
+                            style={[
+                              styles.statusDot,
+                              { backgroundColor: "#EF4444" },
+                            ]}
+                          />
+                          <Text style={styles.busyText}>
+                            {item.activeOrders} đơn
+                          </Text>
+                        </View>
+                      ) : (
+                        <View style={styles.freeBadge}>
+                          <View
+                            style={[
+                              styles.statusDot,
+                              { backgroundColor: "#22C55E" },
+                            ]}
+                          />
+                          <Text style={styles.freeText}>Rảnh</Text>
+                        </View>
+                      )}
+                    </View>
+                  </View>
+                )}
               />
 
               <View style={styles.rowButtons}>
@@ -1669,14 +1741,24 @@ export default function OrderDetailScreen({ route }: any) {
           {isNVGNAssigned && (
             <View style={styles.btnContainer}>
               <TouchableOpacity
-                style={styles.btnAccept}
+                style={[styles.btnAccept, acceptLoading && styles.btnDisabled]}
                 onPress={handleAcceptPress}
+                disabled={acceptLoading}
+                activeOpacity={0.7}
               >
-                <Text style={styles.btnText}>Nhận đơn</Text>
+                {acceptLoading ? (
+                  <View style={styles.loadingRow}>
+                    <ActivityIndicator size="small" color="#fff" />
+                    <Text style={styles.btnText}> Đang xử lý...</Text>
+                  </View>
+                ) : (
+                  <Text style={styles.btnText}>Nhận đơn</Text>
+                )}
               </TouchableOpacity>
               <TouchableOpacity
-                style={styles.btnReject}
+                style={[styles.btnReject, acceptLoading && styles.btnDisabled]}
                 onPress={() => setRejectModal(true)}
+                disabled={acceptLoading}
               >
                 <Text style={styles.btnText}>Từ chối</Text>
               </TouchableOpacity>
@@ -1774,7 +1856,7 @@ export default function OrderDetailScreen({ route }: any) {
           <View style={styles.rejectModalBox}>
             {/* HEADER */}
             <View style={styles.rejectHeader}>
-              <Ionicons name="close-circle-outline" size={26} color="#dc2626" />
+              <Ionicons name="close-circle-outline" size={20} color="#dc2626" />
               <Text style={styles.rejectTitle}>Từ chối đơn</Text>
             </View>
 
@@ -1797,7 +1879,7 @@ export default function OrderDetailScreen({ route }: any) {
                 style={styles.rejectConfirmBtn}
                 onPress={confirmReject}
               >
-                <Ionicons name="close-outline" size={18} color="white" />
+                <Ionicons name="close-outline" size={14} color="white" />
                 <Text style={styles.rejectConfirmText}>Xác nhận từ chối</Text>
               </TouchableOpacity>
 
@@ -1817,7 +1899,7 @@ export default function OrderDetailScreen({ route }: any) {
           <View style={styles.rejectModalBox}>
             {/* HEADER */}
             <View style={styles.rejectHeader}>
-              <Ionicons name="close-circle-outline" size={26} color="#dc2626" />
+              <Ionicons name="close-circle-outline" size={20} color="#dc2626" />
               <Text style={styles.rejectTitle}>
                 Từ chối yêu cầu duyệt hoàn đơn
               </Text>
@@ -1843,7 +1925,7 @@ export default function OrderDetailScreen({ route }: any) {
                 style={styles.rejectConfirmBtn}
                 onPress={() => managerApproveReturnHandler(false)}
               >
-                <Ionicons name="close-outline" size={18} color="white" />
+                <Ionicons name="close-outline" size={14} color="white" />
                 <Text style={styles.rejectConfirmText}>Xác nhận từ chối</Text>
               </TouchableOpacity>
 
@@ -1923,62 +2005,62 @@ const styles = StyleSheet.create({
 
   card: {
     backgroundColor: "#fff",
-    marginHorizontal: 12,
-    marginTop: 12,
-    padding: 16,
-    borderRadius: 10,
+    marginHorizontal: 10,
+    marginTop: 8,
+    padding: 12,
+    borderRadius: 8,
     elevation: 2,
   },
 
   cardTitle: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: "700",
-    marginBottom: 10,
+    marginBottom: 6,
     color: "#374151",
   },
 
   cardTitleSuccess: {
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: "800",
-    marginBottom: 8,
+    marginBottom: 6,
     color: "#166534",
     flexDirection: "row",
     alignItems: "center",
   },
 
   returnTitle: {
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: "800",
     color: "#991b1b",
   },
 
   successText: {
-    fontSize: 13,
+    fontSize: 11,
     color: "#15803d",
-    marginBottom: 10,
-    lineHeight: 18,
+    marginBottom: 6,
+    lineHeight: 16,
   },
 
   company: {
-    fontSize: 16,
+    fontSize: 13,
     fontWeight: "700",
-    marginBottom: 6,
+    marginBottom: 4,
   },
 
   row: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    marginTop: 6,
+    gap: 6,
+    marginTop: 4,
   },
 
   value: {
-    fontSize: 14,
+    fontSize: 12,
     color: "#374151",
   },
 
   link: {
-    fontSize: 14,
+    fontSize: 12,
     color: "#2563eb",
     fontWeight: "600",
     flex: 1,
@@ -1986,7 +2068,7 @@ const styles = StyleSheet.create({
   },
 
   purpose: {
-    fontSize: 14,
+    fontSize: 12,
     color: "#dc2626",
     flex: 1,
     flexWrap: "wrap",
@@ -2013,11 +2095,11 @@ const styles = StyleSheet.create({
   // },
 
   qtyText: {
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: "bold",
     backgroundColor: "#e5e7eb",
-    paddingHorizontal: 6,
-    paddingVertical: 2,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
     borderRadius: 999,
   },
 
@@ -2027,9 +2109,9 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     backgroundColor: "#fff",
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 20,
+    paddingHorizontal: 12,
+    paddingTop: 8,
+    paddingBottom: 16,
     borderTopWidth: 1,
     borderColor: "#e5e7eb",
 
@@ -2043,29 +2125,29 @@ const styles = StyleSheet.create({
 
   btnAccept: {
     backgroundColor: "#16a34a",
-    padding: 14,
-    borderRadius: 8,
+    padding: 10,
+    borderRadius: 6,
     alignItems: "center",
   },
 
   btnReject: {
     backgroundColor: "#ef4444",
-    padding: 14,
-    borderRadius: 8,
+    padding: 10,
+    borderRadius: 6,
     alignItems: "center",
   },
 
   btnDone: {
     backgroundColor: "#2563eb",
-    padding: 14,
-    borderRadius: 8,
+    padding: 10,
+    borderRadius: 6,
     alignItems: "center",
   },
 
   btnText: {
     color: "white",
     fontWeight: "700",
-    fontSize: 15,
+    fontSize: 13,
     textAlign: "center",
   },
 
@@ -2073,69 +2155,70 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    marginBottom: 10,
+    marginBottom: 6,
   },
 
   titleBox: {
     flex: 1,
-    paddingRight: 10,
+    paddingRight: 8,
   },
 
   subtitle: {
-    fontSize: 12,
+    fontSize: 10,
     color: "#6b7280",
-    marginTop: 2,
-    lineHeight: 16,
+    marginTop: 1,
+    lineHeight: 14,
   },
 
   checkAllBtn: {
     color: "#2563eb",
     fontWeight: "600",
-    fontSize: 13,
+    fontSize: 11,
   },
 
   image: {
-    width: 100,
-    height: 100,
-    borderRadius: 8,
-    marginRight: 10,
+    width: 70,
+    height: 70,
+    borderRadius: 6,
+    marginRight: 8,
   },
 
   signatureBox: {
-    marginTop: 12,
+    marginTop: 8,
   },
 
   signature: {
     width: "100%",
-    height: 120,
+    height: 80,
     borderWidth: 1,
     borderColor: "#d1d5db",
     borderStyle: "dashed",
-    marginTop: 6,
+    marginTop: 4,
   },
 
   smallLabel: {
-    fontSize: 12,
+    fontSize: 10,
     color: "#6b7280",
   },
 
   noteBox: {
-    marginTop: 10,
+    marginTop: 6,
     backgroundColor: "#f9fafb",
-    padding: 10,
-    borderRadius: 6,
+    padding: 8,
+    borderRadius: 5,
   },
 
   noteText: {
     fontStyle: "italic",
     color: "#374151",
+    fontSize: 11,
   },
 
   fileItem: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 10,
+    paddingVertical: 6,
     borderBottomWidth: 1,
     borderColor: "#f3f4f6",
   },
@@ -2143,22 +2226,22 @@ const styles = StyleSheet.create({
   fileLeft: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    gap: 8,
   },
 
   fileImage: {
-    width: 40,
-    height: 40,
-    borderRadius: 6,
+    width: 30,
+    height: 30,
+    borderRadius: 4,
   },
 
   fileName: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: "600",
   },
 
   fileType: {
-    fontSize: 11,
+    fontSize: 9,
     color: "#6b7280",
   },
 
@@ -2190,13 +2273,13 @@ const styles = StyleSheet.create({
   },
 
   modalActions: {
-    marginTop: 16,
-    gap: 10,
+    marginTop: 12,
+    gap: 8,
   },
 
   btnBack: {
     backgroundColor: "#6b7280",
-    padding: 12,
+    padding: 10,
     borderRadius: 6,
     alignItems: "center",
   },
@@ -2204,18 +2287,19 @@ const styles = StyleSheet.create({
   btnBackText: {
     color: "#fff",
     fontWeight: "600",
+    fontSize: 12,
   },
 
   btnReturn: {
     backgroundColor: "#ef4444",
-    padding: 12,
+    padding: 10,
     borderRadius: 6,
     alignItems: "center",
   },
 
   btnAcceptMiss: {
     backgroundColor: "#f59e0b",
-    padding: 12,
+    padding: 10,
     borderRadius: 6,
     alignItems: "center",
   },
@@ -2224,127 +2308,127 @@ const styles = StyleSheet.create({
     width: "85%",
     maxHeight: "70%",
     backgroundColor: "#fff",
-    borderRadius: 10,
+    borderRadius: 8,
     overflow: "hidden",
   },
 
   modalHeader: {
-    padding: 16,
+    padding: 12,
     borderBottomWidth: 1,
     borderColor: "#e5e7eb",
   },
 
   modalTitle: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: "700",
   },
 
   modalContent: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
   },
 
   modalFooter: {
-    padding: 16,
+    padding: 12,
     borderTopWidth: 1,
     borderColor: "#e5e7eb",
-    gap: 10,
+    gap: 8,
   },
 
   missingItem: {
     color: "#dc2626",
-    marginBottom: 8,
-    fontSize: 14,
+    marginBottom: 6,
+    fontSize: 12,
   },
 
   alertRed: {
-    marginHorizontal: 12,
-    marginTop: 10,
+    marginHorizontal: 10,
+    marginTop: 6,
     backgroundColor: "#fef2f2",
-    padding: 12,
-    borderRadius: 8,
+    padding: 8,
+    borderRadius: 6,
     borderWidth: 1,
     borderColor: "#fecaca",
   },
 
   alertRedText: {
     color: "#991b1b",
-    fontSize: 13,
+    fontSize: 11,
   },
 
   alertYellow: {
-    marginHorizontal: 12,
-    marginTop: 10,
+    marginHorizontal: 10,
+    marginTop: 6,
     backgroundColor: "#fffbeb",
-    padding: 12,
-    borderRadius: 8,
+    padding: 8,
+    borderRadius: 6,
     borderWidth: 1,
     borderColor: "#fde68a",
   },
 
   alertYellowText: {
     color: "#92400e",
-    fontSize: 13,
+    fontSize: 11,
   },
 
   alertGreen: {
-    marginHorizontal: 12,
-    marginTop: 10,
+    marginHorizontal: 10,
+    marginTop: 6,
     backgroundColor: "#ecfdf5",
-    padding: 12,
-    borderRadius: 8,
+    padding: 8,
+    borderRadius: 6,
     borderWidth: 1,
     borderColor: "#bbf7d0",
   },
 
   alertGreenText: {
     color: "#065f46",
-    fontSize: 13,
+    fontSize: 11,
     fontWeight: "700",
   },
 
   creatorBox: {
-    marginHorizontal: 12,
-    marginTop: 12,
+    marginHorizontal: 10,
+    marginTop: 8,
     backgroundColor: "#eff6ff",
-    borderRadius: 8,
-    padding: 10,
-    borderLeftWidth: 3,
+    borderRadius: 6,
+    padding: 8,
+    borderLeftWidth: 2,
     borderLeftColor: "#2563eb",
   },
 
   creatorHeader: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    marginBottom: 3,
+    gap: 4,
+    marginBottom: 2,
   },
 
   creatorLabel: {
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: "600",
     color: "#1e40af",
   },
 
   creatorName: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: "600",
     color: "#1f2937",
   },
 
   creatorEmail: {
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: "400",
     color: "#6b7280",
-    marginTop: 2,
+    marginTop: 1,
   },
 
   header: {
     backgroundColor: "#ffffff",
-    marginHorizontal: 12,
-    marginTop: 10,
-    padding: 16,
-    borderRadius: 12,
+    marginHorizontal: 10,
+    marginTop: 6,
+    padding: 12,
+    borderRadius: 10,
 
     shadowColor: "#000",
     shadowOpacity: 0.05,
@@ -2354,70 +2438,70 @@ const styles = StyleSheet.create({
   },
 
   orderCode: {
-    fontSize: 20,
+    fontSize: 16,
     fontWeight: "800",
     color: "#2563eb",
-    marginBottom: 6,
+    marginBottom: 4,
   },
 
   headerRow: {
     flexDirection: "row",
     alignItems: "flex-start",
-    gap: 12,
+    gap: 8,
     flexWrap: "wrap",
-    marginTop: 6,
+    marginTop: 4,
   },
 
   infoBlock: {
     flexDirection: "column",
-    gap: 4,
+    gap: 3,
   },
 
   label: {
-    fontSize: 10,
+    fontSize: 9,
     color: "#6b7280",
     fontWeight: "600",
     textTransform: "uppercase",
   },
 
   deptBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 5,
   },
 
   deptText: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: "700",
   },
 
   statusBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 20,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 16,
   },
 
   statusText: {
     fontWeight: "700",
-    fontSize: 12,
+    fontSize: 10,
   },
 
   colorPicker: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
-    marginTop: 12,
+    gap: 8,
+    marginTop: 8,
     backgroundColor: "#f9fafb",
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-    borderRadius: 20,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    borderRadius: 16,
     alignSelf: "flex-start",
   },
 
   colorDot: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
   },
 
   colorSelected: {
@@ -2426,10 +2510,10 @@ const styles = StyleSheet.create({
   },
 
   clearColor: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: "700",
     color: "#6b7280",
-    marginLeft: 4,
+    marginLeft: 2,
   },
 
   modalOverlayReject: {
@@ -2437,87 +2521,87 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.45)",
     justifyContent: "center",
     alignItems: "center",
-    padding: 20,
+    padding: 16,
   },
 
   rejectModalBox: {
     width: "100%",
     backgroundColor: "white",
-    borderRadius: 16,
-    padding: 20,
+    borderRadius: 12,
+    padding: 16,
     elevation: 10,
   },
 
   rejectHeader: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    marginBottom: 6,
+    gap: 6,
+    marginBottom: 4,
   },
 
   rejectTitle: {
-    fontSize: 18,
+    fontSize: 15,
     fontWeight: "700",
     color: "#111827",
   },
 
   rejectSubtitle: {
-    fontSize: 13,
+    fontSize: 11,
     color: "#6b7280",
-    marginBottom: 12,
+    marginBottom: 8,
   },
 
   rejectInput: {
     borderWidth: 1,
     borderColor: "#e5e7eb",
-    borderRadius: 10,
-    padding: 12,
-    minHeight: 90,
+    borderRadius: 8,
+    padding: 10,
+    minHeight: 70,
     textAlignVertical: "top",
-    fontSize: 14,
+    fontSize: 12,
     backgroundColor: "#f9fafb",
   },
 
   rejectButtons: {
-    marginTop: 16,
+    marginTop: 12,
   },
 
   rejectConfirmBtn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 6,
+    gap: 4,
     backgroundColor: "#dc2626",
-    paddingVertical: 12,
-    borderRadius: 10,
-    marginBottom: 10,
+    paddingVertical: 10,
+    borderRadius: 8,
+    marginBottom: 8,
   },
 
   rejectConfirmText: {
     color: "white",
     fontWeight: "600",
-    fontSize: 14,
+    fontSize: 12,
   },
 
   rejectCancelBtn: {
     alignItems: "center",
-    paddingVertical: 10,
+    paddingVertical: 8,
   },
 
   rejectCancelText: {
     color: "#6b7280",
-    fontSize: 14,
+    fontSize: 12,
   },
 
   selectBox: {
-    marginTop: 8,
+    marginTop: 6,
   },
 
   shipperItem: {
-    padding: 10,
-    borderRadius: 8,
+    padding: 8,
+    borderRadius: 6,
     backgroundColor: "#f3f4f6",
-    marginBottom: 6,
+    marginBottom: 4,
   },
 
   shipperActive: {
@@ -2526,6 +2610,7 @@ const styles = StyleSheet.create({
 
   shipperText: {
     color: "#374151",
+    fontSize: 12,
   },
 
   shipperTextActive: {
@@ -2536,16 +2621,16 @@ const styles = StyleSheet.create({
   rowButtons: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginTop: 12,
-    gap: 5,
+    marginTop: 8,
+    gap: 4,
   },
 
   assignBtn: {
     flex: 1,
     backgroundColor: "#2563eb",
-    padding: 12,
-    borderRadius: 8,
-    marginRight: 6,
+    padding: 10,
+    borderRadius: 6,
+    marginRight: 4,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -2553,9 +2638,9 @@ const styles = StyleSheet.create({
   archiveBtn: {
     flex: 1,
     backgroundColor: "#7b25eb",
-    padding: 12,
-    borderRadius: 8,
-    marginRight: 6,
+    padding: 10,
+    borderRadius: 6,
+    marginRight: 4,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -2563,20 +2648,20 @@ const styles = StyleSheet.create({
   supplementBtn: {
     flex: 1,
     backgroundColor: "#f97316",
-    padding: 12,
-    borderRadius: 8,
-    marginLeft: 6,
+    padding: 10,
+    borderRadius: 6,
+    marginLeft: 4,
     alignItems: "center",
     justifyContent: "center",
   },
 
   assignedBox: {
-    marginHorizontal: 12,
-    marginTop: 10,
+    marginHorizontal: 10,
+    marginTop: 6,
     backgroundColor: "#eff6ff",
-    borderRadius: 10,
-    padding: 14,
-    borderLeftWidth: 4,
+    borderRadius: 8,
+    padding: 10,
+    borderLeftWidth: 3,
     borderLeftColor: "#2563eb",
 
     shadowColor: "#000",
@@ -2588,101 +2673,101 @@ const styles = StyleSheet.create({
   assignedHeader: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    marginBottom: 6,
+    gap: 4,
+    marginBottom: 4,
   },
 
   assignedLabel: {
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: "600",
     color: "#1e40af",
   },
 
   assignedName: {
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: "700",
     color: "#111827",
   },
 
   assignedEmail: {
-    fontSize: 12,
+    fontSize: 10,
     color: "#6b7280",
-    marginTop: 2,
+    marginTop: 1,
   },
 
   dropdownContainer: {
-    borderRadius: 10,
+    borderRadius: 8,
     elevation: 10,
     zIndex: 9999,
   },
 
   dropdown: {
-    height: 48,
+    height: 40,
     borderWidth: 1,
     borderColor: "#e5e7eb",
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    marginTop: 6,
-    marginBottom: 12,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    marginTop: 4,
+    marginBottom: 8,
     backgroundColor: "white",
   },
 
   dropdownPlaceholder: {
     color: "#9ca3af",
-    fontSize: 14,
+    fontSize: 12,
   },
 
   dropdownSelected: {
-    fontSize: 14,
+    fontSize: 12,
     color: "#111827",
   },
 
   btnContainer: {
-    gap: 10,
+    gap: 8,
   },
 
   orderTypeBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 20,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 16,
   },
 
   orderTypeText: {
     fontWeight: "700",
-    fontSize: 12,
+    fontSize: 10,
     textTransform: "uppercase",
   },
 
   deliveryBox: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    borderRadius: 6,
+    paddingVertical: 3,
+    paddingHorizontal: 6,
+    borderRadius: 5,
     alignSelf: "flex-start",
-    marginBottom: 6,
-    gap: 6,
+    marginBottom: 4,
+    gap: 4,
     borderWidth: 1,
   },
 
   deliveryText: {
-    fontSize: 13,
+    fontSize: 11,
     fontWeight: "700",
   },
 
   paymentContainer: {
     borderTopWidth: 1,
     borderTopColor: "#e5e7eb",
-    paddingTop: 10,
-    marginTop: 10,
+    paddingTop: 6,
+    marginTop: 6,
   },
 
   paymentHeader: {
-    marginBottom: 6,
+    marginBottom: 4,
   },
 
   paymentHeaderText: {
-    fontSize: 11,
+    fontSize: 10,
     color: "#6b7280",
     fontWeight: "600",
     letterSpacing: 0.5,
@@ -2691,23 +2776,25 @@ const styles = StyleSheet.create({
   paymentRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 6,
+    marginBottom: 4,
   },
 
   paymentIcon: {
-    marginRight: 6,
+    marginRight: 4,
+    fontSize: 12,
   },
 
   paymentTextLine: {
-    fontSize: 13,
+    fontSize: 11,
     color: "#374151",
   },
 
   paymentHighlight: {
     fontWeight: "700",
     textTransform: "uppercase",
-    paddingHorizontal: 4,
-    borderRadius: 4,
+    paddingHorizontal: 3,
+    borderRadius: 3,
+    fontSize: 10,
   },
 
   collectText: {
@@ -2723,7 +2810,7 @@ const styles = StyleSheet.create({
   amountRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginTop: 6,
+    marginTop: 4,
   },
 
   amountItem: {
@@ -2731,13 +2818,13 @@ const styles = StyleSheet.create({
   },
 
   amountLabel: {
-    fontSize: 11,
+    fontSize: 10,
     color: "#6b7280",
-    marginBottom: 2,
+    marginBottom: 1,
   },
 
   amountValue: {
-    fontSize: 16,
+    fontSize: 13,
     fontWeight: "700",
     color: "#111827",
   },
@@ -2745,24 +2832,24 @@ const styles = StyleSheet.create({
   imageGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 10,
-    marginTop: 10,
+    gap: 6,
+    marginTop: 6,
   },
 
   rejectBtn: {
     backgroundColor: "#dc2626",
     flex: 1,
-    padding: 12,
-    borderRadius: 8,
-    marginRight: 6,
+    padding: 10,
+    borderRadius: 6,
+    marginRight: 4,
     alignItems: "center",
   },
 
   approveBtn: {
     flex: 1,
-    padding: 12,
-    borderRadius: 8,
-    marginRight: 6,
+    padding: 10,
+    borderRadius: 6,
+    marginRight: 4,
     alignItems: "center",
     backgroundColor: "#16a34a",
   },
@@ -2770,28 +2857,28 @@ const styles = StyleSheet.create({
   exportBtn: {
     flexDirection: "row",
     alignItems: "center",
-    marginRight: 12,
+    marginRight: 8,
 
     backgroundColor: "#eff6ff",
     borderWidth: 1,
     borderColor: "#2563eb",
 
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
   },
 
   exportText: {
     color: "#2563eb",
-    fontSize: 13,
+    fontSize: 11,
     fontWeight: "600",
-    marginLeft: 6,
+    marginLeft: 4,
   },
 
   timeText: {
-    fontSize: 12,
+    fontSize: 10,
     color: "#6b7280",
-    marginBottom: 8,
+    marginBottom: 6,
   },
 
   timeSuccess: {
@@ -2807,20 +2894,20 @@ const styles = StyleSheet.create({
   codeRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 6,
     flexWrap: "wrap",
   },
 
   priorityInlineBadge: {
     backgroundColor: "#dc2626",
-    paddingHorizontal: 6,
-    paddingVertical: 4,
-    borderRadius: 6,
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+    borderRadius: 4,
   },
 
   priorityInlineText: {
     color: "#fff",
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: "500",
     letterSpacing: 0.5,
   },
@@ -2828,32 +2915,32 @@ const styles = StyleSheet.create({
   purposeContainer: {
     borderTopWidth: 1,
     borderTopColor: "#e5e7eb",
-    paddingTop: 10,
-    marginTop: 10,
+    paddingTop: 6,
+    marginTop: 6,
   },
 
   purposeHeader: {
-    fontSize: 11,
+    fontSize: 10,
     color: "#6b7280",
     fontWeight: "600",
-    marginBottom: 4,
+    marginBottom: 3,
   },
 
   purposeText: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: "500",
     color: "#1d4ed8",
   },
 
   createdInfo: {
-    paddingTop: 10,
-    paddingHorizontal: 12,
+    paddingTop: 6,
+    paddingHorizontal: 10,
   },
 
   createdText: {
-    fontSize: 12,
+    fontSize: 10,
     color: "#6b7280",
-    lineHeight: 18,
+    lineHeight: 16,
   },
 
   createdName: {
@@ -2868,8 +2955,8 @@ const styles = StyleSheet.create({
 
   checkItem: {
     flexDirection: "row",
-    gap: 10,
-    paddingVertical: 10,
+    gap: 8,
+    paddingVertical: 8,
   },
 
   checkContent: {
@@ -2883,7 +2970,7 @@ const styles = StyleSheet.create({
   },
 
   checkText: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: "600",
     color: "#111827",
     flex: 1,
@@ -2896,18 +2983,18 @@ const styles = StyleSheet.create({
 
   typeRow: {
     flexDirection: "row",
-    gap: 8,
-    marginTop: 4,
+    gap: 6,
+    marginTop: 3,
     flexWrap: "wrap",
   },
 
   typeTag: {
-    fontSize: 11,
+    fontSize: 10,
   },
 
   detailText: {
-    marginTop: 6,
-    fontSize: 12,
+    marginTop: 4,
+    fontSize: 10,
     color: "#4b5563",
     fontStyle: "italic",
   },
@@ -2915,18 +3002,18 @@ const styles = StyleSheet.create({
   noteBtn: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
-    marginTop: 6,
+    gap: 3,
+    marginTop: 4,
   },
 
   noteIcon: {
-    fontSize: 12,
+    fontSize: 10,
     color: "#f97316",
   },
 
   noteTextAtt: {
-    marginTop: 4,
-    fontSize: 12,
+    marginTop: 3,
+    fontSize: 10,
     color: "#f97316",
     fontStyle: "italic",
   },
@@ -2941,33 +3028,33 @@ const styles = StyleSheet.create({
   modalBoxDesc: {
     width: "85%",
     backgroundColor: "#fff",
-    borderRadius: 16,
-    padding: 20,
+    borderRadius: 12,
+    padding: 16,
   },
 
   modalTitleDesc: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "700",
-    marginBottom: 10,
+    marginBottom: 8,
     color: "#111",
   },
 
   modalDesc: {
-    fontSize: 14,
+    fontSize: 12,
     color: "#6b7280",
-    marginBottom: 20,
+    marginBottom: 16,
   },
 
   modalActionsDesc: {
     flexDirection: "row",
     justifyContent: "flex-end",
-    gap: 10,
+    gap: 8,
   },
 
   modalBtn: {
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
   },
 
   cancelBtn: {
@@ -2981,26 +3068,28 @@ const styles = StyleSheet.create({
   cancelText: {
     color: "#111",
     fontWeight: "600",
+    fontSize: 12,
   },
 
   confirmText: {
     color: "#fff",
     fontWeight: "600",
+    fontSize: 12,
   },
 
   audioTitle: {
-    fontSize: 12,
+    fontSize: 10,
     color: "#6B7280",
-    marginBottom: 8,
+    marginBottom: 6,
   },
 
   audioCard: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#fff",
-    padding: 12,
-    borderRadius: 12,
-    marginBottom: 8,
+    padding: 8,
+    borderRadius: 10,
+    marginBottom: 6,
     shadowColor: "#000",
     shadowOpacity: 0.05,
     shadowRadius: 4,
@@ -3008,17 +3097,17 @@ const styles = StyleSheet.create({
   },
 
   playBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     backgroundColor: "#16A34A",
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 10,
+    marginRight: 8,
   },
 
   progressBar: {
-    height: 4,
+    height: 3,
     backgroundColor: "#E5E7EB",
     borderRadius: 999,
     overflow: "hidden",
@@ -3032,11 +3121,224 @@ const styles = StyleSheet.create({
   timeRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginTop: 4,
+    marginTop: 3,
   },
 
   timeTextSmall: {
-    fontSize: 10,
+    fontSize: 8,
     color: "#9CA3AF",
+  },
+
+  //   card: {
+  //   backgroundColor: "#FFFFFF",
+  //   borderRadius: 14,
+  //   padding: 14,
+  //   marginBottom: 12,
+  //   borderWidth: 1,
+  //   borderColor: "#F1F5F9",
+  //   shadowColor: "#000",
+  //   shadowOffset: { width: 0, height: 1 },
+  //   shadowOpacity: 0.03,
+  //   shadowRadius: 6,
+  //   elevation: 2,
+  // },
+
+  cardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 12,
+  },
+
+  // cardTitle: {
+  //   fontSize: 14,
+  //   fontWeight: "700",
+  //   color: "#1E293B",
+  // },
+
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 8,
+  },
+
+  // smallLabel: {
+  //   fontSize: 12,
+  //   fontWeight: "600",
+  //   color: "#64748B",
+  // },
+
+  // Dropdown styles
+  // dropdown: {
+  //   borderWidth: 1,
+  //   borderColor: "#E2E8F0",
+  //   borderRadius: 10,
+  //   paddingHorizontal: 12,
+  //   height: 44,
+  //   backgroundColor: "#F8FAFC",
+  //   marginBottom: 12,
+  // },
+
+  // dropdownContainer: {
+  //   borderRadius: 12,
+  //   borderWidth: 1,
+  //   borderColor: "#E2E8F0",
+  //   marginTop: 4,
+  //   shadowColor: "#000",
+  //   shadowOffset: { width: 0, height: 4 },
+  //   shadowOpacity: 0.1,
+  //   shadowRadius: 12,
+  //   elevation: 8,
+  // },
+
+  dropdownItemContainer: {
+    borderRadius: 8,
+  },
+
+  // dropdownPlaceholder: {
+  //   fontSize: 12,
+  //   color: "#94A3B8",
+  // },
+
+  // dropdownSelected: {
+  //   fontSize: 12,
+  //   color: "#1E293B",
+  //   fontWeight: "500",
+  // },
+
+  // Dropdown Item
+  itemRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+  },
+
+  itemLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    flex: 1,
+  },
+
+  itemAvatar: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  itemAvatarText: {
+    fontSize: 13,
+    fontWeight: "700",
+  },
+
+  itemName: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#1E293B",
+    marginBottom: 1,
+  },
+
+  itemStatus: {
+    fontSize: 10,
+    color: "#94A3B8",
+  },
+
+  itemRight: {
+    alignItems: "flex-end",
+  },
+
+  busyBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FEF2F2",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+    gap: 4,
+  },
+
+  freeBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F0FDF4",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+    gap: 4,
+  },
+
+  statusDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+  },
+
+  busyText: {
+    fontSize: 10,
+    color: "#EF4444",
+    fontWeight: "600",
+  },
+
+  freeText: {
+    fontSize: 10,
+    color: "#22C55E",
+    fontWeight: "600",
+  },
+
+  // Buttons
+  // rowButtons: {
+  //   flexDirection: "row",
+  //   gap: 8,
+  //   marginTop: 4,
+  // },
+
+  // supplementBtn: {
+  //   flex: 1,
+  //   borderRadius: 10,
+  //   overflow: "hidden",
+  //   shadowColor: "#F59E0B",
+  //   shadowOffset: { width: 0, height: 2 },
+  //   shadowOpacity: 0.3,
+  //   shadowRadius: 4,
+  //   elevation: 4,
+  // },
+
+  // assignBtn: {
+  //   flex: 1,
+  //   borderRadius: 10,
+  //   overflow: "hidden",
+  //   shadowColor: "#3B82F6",
+  //   shadowOffset: { width: 0, height: 2 },
+  //   shadowOpacity: 0.3,
+  //   shadowRadius: 4,
+  //   elevation: 4,
+  // },
+
+  assignBtnDisabled: {
+    opacity: 0.6,
+    shadowColor: "#94A3B8",
+  },
+
+  btnGradient: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 10,
+    gap: 4,
+  },
+
+  btnDisabled: {
+    opacity: 0.6,
+  },
+
+  loadingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
   },
 });

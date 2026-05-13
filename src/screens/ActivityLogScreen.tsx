@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from "react";
+import React, { useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -11,7 +11,6 @@ import {
   ScrollView,
   RefreshControl,
   StyleSheet,
-  Dimensions,
   Animated,
 } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
@@ -21,10 +20,6 @@ import { logService } from "../services/log.service";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
 import { actionConfig } from "../utils/statusOrder";
-import { BlurView } from "expo-blur";
-import { LinearGradient } from "expo-linear-gradient";
-
-const { width } = Dimensions.get("window");
 
 export default function ActivityLogScreen() {
   const [logs, setLogs] = useState<any[]>([]);
@@ -48,11 +43,11 @@ export default function ActivityLogScreen() {
     actions: [] as string[],
   });
 
-  // Animation cho filter panel
   const toggleFilter = () => {
-    setShowFilter(!showFilter);
+    const newState = !showFilter;
+    setShowFilter(newState);
     Animated.timing(filterAnimation, {
-      toValue: showFilter ? 0 : 1,
+      toValue: newState ? 1 : 0,
       duration: 250,
       useNativeDriver: false,
     }).start();
@@ -108,7 +103,6 @@ export default function ActivityLogScreen() {
       console.log(err);
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
   };
 
@@ -134,14 +128,26 @@ export default function ActivityLogScreen() {
   };
 
   const toggleAction = (action: string) => {
-    const newActions = filter.actions.includes(action)
-      ? filter.actions.filter((a) => a !== action)
-      : [...filter.actions, action];
+    let newActions = [...filter.actions];
+
+    if (newActions.includes(action)) {
+      newActions = newActions.filter((a) => a !== action);
+    } else {
+      newActions.push(action);
+    }
 
     const newFilter = { ...filter, actions: newActions };
     setFilter(newFilter);
     setPage(1);
     fetchLogs(1, newFilter);
+  };
+
+  const clearActions = () => {
+    const newFilter = { ...filter, actions: [] };
+    setFilter(newFilter);
+    setPage(1);
+    fetchLogs(1, newFilter);
+    setShowActionModal(false);
   };
 
   const resetFilter = () => {
@@ -155,279 +161,98 @@ export default function ActivityLogScreen() {
     setFilter(empty);
     setPage(1);
     fetchLogs(1, empty);
+    setShowActionModal(false);
     setShowFilter(false);
   };
 
   const formatDate = (date: Date) => date.toISOString().split("T")[0];
 
-  const activeFilterCount = useMemo(() => {
-    return (
-      (filter.user ? 1 : 0) +
-      (filter.orderCode ? 1 : 0) +
-      (filter.fromDate ? 1 : 0) +
-      (filter.toDate ? 1 : 0) +
-      filter.actions.length
-    );
-  }, [filter]);
+  const activeCount =
+    (filter.user ? 1 : 0) +
+    (filter.orderCode ? 1 : 0) +
+    (filter.fromDate ? 1 : 0) +
+    (filter.toDate ? 1 : 0) +
+    filter.actions.length;
 
-  const renderHeader = () => {
-    const hasActiveFilters = activeFilterCount > 0;
-
-    return (
-      <View style={styles.header}>
-        <LinearGradient
-          colors={["#FFFFFF", "#F8FAFC"]}
-          style={styles.headerGradient}
-        >
-          <View style={styles.searchContainer}>
-            <View style={styles.searchWrapper}>
-              <Ionicons
-                name="search-outline"
-                size={20}
-                color="#94A3B8"
-                style={styles.searchIcon}
-              />
-              <TextInput
-                placeholder="Tìm theo mã đơn hàng..."
-                placeholderTextColor="#94A3B8"
-                value={filter.orderCode}
-                onChangeText={(t) => onChangeFilter("orderCode", t)}
-                style={styles.searchInput}
-              />
-              {filter.orderCode !== "" && (
-                <TouchableOpacity
-                  onPress={() => onChangeFilter("orderCode", "")}
-                >
-                  <Ionicons name="close-circle" size={18} color="#CBD5E1" />
-                </TouchableOpacity>
-              )}
-            </View>
-
-            <TouchableOpacity
-              style={[
-                styles.filterButton,
-                hasActiveFilters && styles.filterButtonActive,
-              ]}
-              onPress={toggleFilter}
-            >
-              <Ionicons
-                name="options-outline"
-                size={22}
-                color={hasActiveFilters ? "#FFFFFF" : "#64748B"}
-              />
-              {hasActiveFilters && (
-                <View style={styles.filterBadge}>
-                  <Text style={styles.filterBadgeText}>
-                    {activeFilterCount}
-                  </Text>
-                </View>
-              )}
-            </TouchableOpacity>
-          </View>
-
-          {/* Filter Tags */}
-          {hasActiveFilters && (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              style={styles.filterTagsContainer}
-              contentContainerStyle={styles.filterTagsContent}
-            >
-              {filter.user && (
-                <FilterTag
-                  label={`👤 ${filter.user}`}
-                  onRemove={() => onChangeFilter("user", "")}
-                />
-              )}
-              {filter.fromDate && (
-                <FilterTag
-                  label={`📅 Từ ${filter.fromDate}`}
-                  onRemove={() => onChangeFilter("fromDate", "")}
-                />
-              )}
-              {filter.toDate && (
-                <FilterTag
-                  label={`📅 Đến ${filter.toDate}`}
-                  onRemove={() => onChangeFilter("toDate", "")}
-                />
-              )}
-              {filter.actions.map((action) => (
-                <FilterTag
-                  key={action}
-                  label={actionConfig[action]?.label || action}
-                  color={actionConfig[action]?.color}
-                  onRemove={() => toggleAction(action)}
-                />
-              ))}
-              {activeFilterCount > 0 && (
-                <TouchableOpacity
-                  onPress={resetFilter}
-                  style={styles.clearAllTag}
-                >
-                  <Text style={styles.clearAllText}>Xóa tất cả</Text>
-                </TouchableOpacity>
-              )}
-            </ScrollView>
-          )}
-        </LinearGradient>
-
-        {/* Expandable Filter Panel */}
-        {showFilter && (
-          <Animated.View
-            style={[
-              styles.filterPanel,
-              {
-                opacity: filterAnimation,
-                transform: [
-                  {
-                    translateY: filterAnimation.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [-20, 0],
-                    }),
-                  },
-                ],
-              },
-            ]}
-          >
-            <FilterSection
-              filter={filter}
-              onChangeFilter={onChangeFilter}
-              onShowActionModal={() => setShowActionModal(true)}
-              onShowFromPicker={() => setShowFromPicker(true)}
-              onShowToPicker={() => setShowToPicker(true)}
-            />
-          </Animated.View>
-        )}
-      </View>
-    );
-  };
-
-  const renderEmptyState = () => (
-    <View style={styles.emptyContainer}>
-      <View style={styles.emptyIconContainer}>
-        <Ionicons name="document-text-outline" size={64} color="#CBD5E1" />
-      </View>
-      <Text style={styles.emptyTitle}>Không có lịch sử hoạt động</Text>
-      <Text style={styles.emptySubtitle}>
-        Các hoạt động sẽ xuất hiện tại đây khi có thay đổi
-      </Text>
-      {activeFilterCount > 0 && (
-        <TouchableOpacity style={styles.emptyResetButton} onPress={resetFilter}>
-          <Text style={styles.emptyResetText}>Xóa bộ lọc</Text>
-        </TouchableOpacity>
-      )}
-    </View>
-  );
-
-  const renderDateHeader = (date: string) => {
-    const dateObj = new Date(date);
-    const today = new Date();
-    const yesterday = new Date(today);
-    yesterday.setDate(today.getDate() - 1);
-
-    let displayDate = dateObj.toLocaleDateString("vi-VN", {
-      weekday: "long",
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    });
-
-    if (dateObj.toDateString() === today.toDateString()) {
-      displayDate = "Hôm nay";
-    } else if (dateObj.toDateString() === yesterday.toDateString()) {
-      displayDate = "Hôm qua";
-    }
-
-    return (
-      <View style={styles.dateHeader}>
-        <View style={styles.dateLine} />
-        <View style={styles.dateBadge}>
-          <Text style={styles.dateText}>{displayDate}</Text>
-        </View>
-        <View style={styles.dateLine} />
-      </View>
-    );
-  };
-
-  const renderLogItem = ({ item }: any) => {
+  const renderItem = ({ item }: any) => {
     if (item.type === "header") {
-      return renderDateHeader(item.date);
+      const date = new Date(item.date);
+      const today = new Date();
+      const yesterday = new Date();
+      yesterday.setDate(today.getDate() - 1);
+
+      let label = date.toLocaleDateString("vi-VN");
+
+      if (date.toDateString() === today.toDateString()) {
+        label = "Hôm nay";
+      } else if (date.toDateString() === yesterday.toDateString()) {
+        label = "Hôm qua";
+      }
+
+      return (
+        <View style={styles.dateHeader}>
+          <View style={styles.dateLine} />
+          <View style={styles.dateBadge}>
+            <Text style={styles.dateText}>{label}</Text>
+          </View>
+          <View style={styles.dateLine} />
+        </View>
+      );
     }
 
     const config = actionConfig[item.action] || {
       label: item.action,
-      color: "#64748B",
+      color: "#999",
     };
 
     return (
-      <View style={styles.logCard}>
-        <View style={styles.logCardHeader}>
-          <View style={styles.userSection}>
-            {/* <View style={[styles.avatar, { backgroundColor: `${config.color}20` }]}>
-              <Text style={[styles.avatarText, { color: config.color }]}>
-                {(item.userName || "U").charAt(0).toUpperCase()}
-              </Text>
-            </View> */}
-            <View style={styles.userInfo}>
-              <Text style={styles.userName}>
-                {item.userName || "Người dùng"}
-              </Text>
-              <Text style={styles.userEmail}>
-                {item.userEmail || "Không có email"}
-              </Text>
-            </View>
+      <View style={styles.card}>
+        <View style={styles.cardHeader}>
+          <View style={styles.userInfo}>
+            <Text style={styles.userName} numberOfLines={1}>
+              {item.userName || "Chưa có tên"}
+            </Text>
+            <Text style={styles.userEmail} numberOfLines={1}>
+              {item.userEmail || "Không có email"}
+            </Text>
           </View>
 
-          <View
-            style={[
-              styles.actionBadge,
-              { backgroundColor: `${config.color}15` },
-            ]}
-          >
-            <View
-              style={[styles.actionDot, { backgroundColor: config.color }]}
-            />
-            <Text style={[styles.actionText, { color: config.color }]}>
-              {config.label}
+          <View style={styles.timeContainer}>
+            <Ionicons name="time-outline" size={12} color="#94A3B8" />
+            <Text style={styles.timeText}>
+              {new Date(item.timestamp).toLocaleTimeString("vi-VN", {
+                hour: "2-digit",
+                minute: "2-digit",
+                second: "2-digit",
+              })}
+              {" - "}
+              {new Date(item.timestamp).toLocaleDateString("vi-VN", {
+                day: "2-digit",
+                month: "2-digit",
+                year: "numeric",
+              })}
             </Text>
           </View>
         </View>
 
-        <View style={styles.logCardBody}>
-          <View style={styles.orderInfo}>
-            <Ionicons name="cube-outline" size={16} color="#3B82F6" />
-            <Text style={styles.orderCode}>
-              #{item.orderCode || item.orderId || "N/A"}
-            </Text>
+        <View style={styles.cardBody}>
+          <View style={[styles.actionBadge, { backgroundColor: config.color }]}>
+            <Text style={styles.actionText}>{config.label}</Text>
           </View>
 
-          <View style={styles.timeInfo}>
-            <View style={styles.timeItem}>
-              <Ionicons name="calendar-outline" size={13} color="#94A3B8" />
-              <Text style={styles.timeText}>
-                {new Date(item.timestamp).toLocaleDateString("vi-VN", {
-                  day: "2-digit",
-                  month: "2-digit",
-                  year: "numeric",
-                })}
-              </Text>
-            </View>
-            <View style={styles.timeDivider} />
-            <View style={styles.timeItem}>
-              <Ionicons name="time-outline" size={13} color="#94A3B8" />
-              <Text style={styles.timeText}>
-                {new Date(item.timestamp).toLocaleTimeString("vi-VN", {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
-              </Text>
-            </View>
+          <View style={styles.orderBox}>
+            <Ionicons name="cube-outline" size={14} color="#3B82F6" />
+            <Text style={styles.orderText} numberOfLines={1}>
+              {item.orderCode || item.orderId || "N/A"}
+            </Text>
           </View>
         </View>
 
         {item.details && (
-          <View style={styles.detailsContainer}>
-            <Text style={styles.detailsText}>{item.details}</Text>
+          <View style={styles.detailBox}>
+            <Text style={styles.detailText} numberOfLines={2}>
+              {item.details}
+            </Text>
           </View>
         )}
       </View>
@@ -436,32 +261,235 @@ export default function ActivityLogScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["left", "right"]}>
-      {renderHeader()}
+      {/* HEADER */}
+      <View style={styles.header}>
+        <View style={styles.searchRow}>
+          <View style={styles.searchWrapper}>
+            <Ionicons name="search-outline" size={18} color="#94A3B8" />
+            <TextInput
+              placeholder="Tìm mã đơn hàng..."
+              placeholderTextColor="#94A3B8"
+              value={filter.orderCode}
+              onChangeText={(t) => onChangeFilter("orderCode", t)}
+              style={styles.searchInput}
+            />
+            {filter.orderCode !== "" && (
+              <TouchableOpacity onPress={() => onChangeFilter("orderCode", "")}>
+                <Ionicons name="close-circle" size={18} color="#CBD5E1" />
+              </TouchableOpacity>
+            )}
+          </View>
 
+          <TouchableOpacity
+            style={[
+              styles.filterBtn,
+              activeCount > 0 && styles.filterBtnActive,
+            ]}
+            onPress={toggleFilter}
+          >
+            <Ionicons
+              name="options-outline"
+              size={20}
+              color={activeCount > 0 ? "#FFFFFF" : "#64748B"}
+            />
+            {activeCount > 0 && (
+              <View style={styles.filterBadge}>
+                <Text style={styles.filterBadgeText}>{activeCount}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        </View>
+
+        {/* Filter Tags */}
+        {activeCount > 0 && (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.tagScroll}
+            contentContainerStyle={styles.tagContent}
+          >
+            {filter.user !== "" && (
+              <Tag
+                label={`👤 ${filter.user}`}
+                onPress={() => onChangeFilter("user", "")}
+              />
+            )}
+            {filter.orderCode !== "" && (
+              <Tag
+                label={`📦 ${filter.orderCode}`}
+                onPress={() => onChangeFilter("orderCode", "")}
+              />
+            )}
+            {filter.fromDate !== "" && (
+              <Tag
+                label={`📅 ${filter.fromDate}`}
+                onPress={() => onChangeFilter("fromDate", "")}
+              />
+            )}
+            {filter.toDate !== "" && (
+              <Tag
+                label={`📅 ${filter.toDate}`}
+                onPress={() => onChangeFilter("toDate", "")}
+              />
+            )}
+            {filter.actions.map((action) => (
+              <Tag
+                key={action}
+                label={actionConfig[action]?.label || action}
+                color={actionConfig[action]?.color}
+                onPress={() => toggleAction(action)}
+              />
+            ))}
+            <TouchableOpacity onPress={resetFilter} style={styles.clearAllTag}>
+              <Text style={styles.clearAllText}>Xóa tất cả</Text>
+            </TouchableOpacity>
+          </ScrollView>
+        )}
+      </View>
+
+      {/* FILTER PANEL */}
+      {showFilter && (
+        <Animated.View
+          style={[
+            styles.filterPanel,
+            {
+              opacity: filterAnimation,
+              transform: [
+                {
+                  translateY: filterAnimation.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [-10, 0],
+                  }),
+                },
+              ],
+            },
+          ]}
+        >
+          <Text style={styles.filterLabel}>Người dùng</Text>
+          <View style={styles.inputWrapper}>
+            <Ionicons name="person-outline" size={16} color="#94A3B8" />
+            <TextInput
+              placeholder="Nhập tên hoặc email..."
+              placeholderTextColor="#94A3B8"
+              value={filter.user}
+              onChangeText={(t) => onChangeFilter("user", t)}
+              style={styles.filterInput}
+            />
+          </View>
+
+          <Text style={styles.filterLabel}>Thời gian</Text>
+          <View style={styles.dateRow}>
+            <TouchableOpacity
+              style={[styles.inputWrapper, { flex: 1 }]}
+              onPress={() => setShowFromPicker(true)}
+            >
+              <Ionicons name="calendar-outline" size={16} color="#94A3B8" />
+              <Text
+                style={[
+                  styles.dateText,
+                  !filter.fromDate && styles.placeholder,
+                ]}
+                numberOfLines={1}
+              >
+                {filter.fromDate || "Từ ngày"}
+              </Text>
+            </TouchableOpacity>
+
+            <Text style={styles.dateArrow}>→</Text>
+
+            <TouchableOpacity
+              style={[styles.inputWrapper, { flex: 1 }]}
+              onPress={() => setShowToPicker(true)}
+            >
+              <Ionicons name="calendar-outline" size={16} color="#94A3B8" />
+              <Text
+                style={[styles.dateText, !filter.toDate && styles.placeholder]}
+                numberOfLines={1}
+              >
+                {filter.toDate || "Đến ngày"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          <Text style={styles.filterLabel}>Hành động</Text>
+          <TouchableOpacity
+            style={styles.inputWrapper}
+            onPress={() => setShowActionModal(true)}
+          >
+            <Ionicons name="flash-outline" size={16} color="#94A3B8" />
+            <Text style={styles.actionFilterText} numberOfLines={1}>
+              {filter.actions.length === 0
+                ? "Chọn loại hành động"
+                : `Đã chọn ${filter.actions.length} hành động`}
+            </Text>
+            <Ionicons name="chevron-forward" size={16} color="#CBD5E1" />
+          </TouchableOpacity>
+        </Animated.View>
+      )}
+
+      {/* SEARCH STATUS */}
+      {/* {(filter.orderCode ||
+        filter.user ||
+        filter.actions.length > 0 ||
+        filter.fromDate ||
+        filter.toDate) && (
+        <View style={styles.searchStatus}>
+          <Text style={styles.searchStatusText} numberOfLines={2}>
+            🔍 Tìm kiếm:
+            {filter.orderCode ? ` mã "${filter.orderCode}"` : ""}
+            {filter.user ? ` người dùng "${filter.user}"` : ""}
+            {filter.actions.length > 0
+              ? ` hành động: ${filter.actions
+                  .map((a) => actionConfig[a]?.label)
+                  .join(", ")}`
+              : ""}
+            {filter.fromDate || filter.toDate
+              ? ` thời gian: ${filter.fromDate || "..."} → ${filter.toDate || "..."}`
+              : ""}
+          </Text>
+        </View>
+      )} */}
+
+      {/* LIST */}
       <FlatList
         data={groupedLogs}
         keyExtractor={(item, index) => index.toString()}
-        renderItem={renderLogItem}
+        renderItem={renderItem}
         contentContainerStyle={styles.listContent}
-        ListEmptyComponent={!loading ? renderEmptyState : null}
+        ListEmptyComponent={
+          !loading ? (
+            <View style={styles.emptyContainer}>
+              <Ionicons
+                name="document-text-outline"
+                size={48}
+                color="#CBD5E1"
+              />
+              <Text style={styles.emptyTitle}>Không có lịch sử hoạt động</Text>
+              <Text style={styles.emptySubtitle}>
+                Các hoạt động sẽ xuất hiện tại đây khi có thay đổi
+              </Text>
+            </View>
+          ) : null
+        }
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
             onRefresh={() => {
               setRefreshing(true);
-              fetchLogs(1, filter);
+              fetchLogs(1, filter).finally(() => setRefreshing(false));
             }}
             tintColor="#3B82F6"
             colors={["#3B82F6"]}
           />
         }
         onEndReachedThreshold={0.3}
-        onEndReached={() => {
-          if (page < totalPages && !isFetchingMore && !loading) {
+        onEndReached={async () => {
+          if (page < totalPages && !isFetchingMore) {
             setIsFetchingMore(true);
             const next = page + 1;
             setPage(next);
-            fetchLogs(next, filter).finally(() => setIsFetchingMore(false));
+            await fetchLogs(next, filter);
+            setIsFetchingMore(false);
           }
         }}
         ListFooterComponent={() => {
@@ -469,6 +497,7 @@ export default function ActivityLogScreen() {
             return (
               <View style={styles.footer}>
                 <ActivityIndicator size="small" color="#3B82F6" />
+                <Text style={styles.footerText}>Đang tải thêm...</Text>
               </View>
             );
           }
@@ -476,9 +505,7 @@ export default function ActivityLogScreen() {
           if (page >= totalPages && logs.length > 0) {
             return (
               <View style={styles.footer}>
-                <View style={styles.endLine} />
-                <Text style={styles.endText}>Đã hiển thị tất cả</Text>
-                <View style={styles.endLine} />
+                <Text style={styles.footerDone}>Đã hiển thị tất cả</Text>
               </View>
             );
           }
@@ -487,15 +514,23 @@ export default function ActivityLogScreen() {
         }}
       />
 
-      {/* Date Pickers */}
+      {/* DATE PICKERS */}
       {showFromPicker && (
         <DateTimePicker
-          value={new Date()}
+          value={filter.fromDate ? new Date(filter.fromDate) : new Date()}
           mode="date"
+          // Bỏ maximumDate để có thể chọn ngày tương lai
           onChange={(event, date) => {
             setShowFromPicker(false);
             if (event.type === "set" && date) {
-              onChangeFilter("fromDate", formatDate(date));
+              const formattedDate = formatDate(date);
+              onChangeFilter("fromDate", formattedDate);
+
+              // Nếu "đến ngày" đang có mà nhỏ hơn "từ ngày" mới chọn
+              // thì tự động cập nhật "đến ngày" bằng "từ ngày"
+              if (filter.toDate && new Date(filter.toDate) < date) {
+                onChangeFilter("toDate", formattedDate);
+              }
             }
           }}
         />
@@ -503,9 +538,16 @@ export default function ActivityLogScreen() {
 
       {showToPicker && (
         <DateTimePicker
-          value={filter.fromDate ? new Date(filter.fromDate) : new Date()}
+          value={
+            filter.toDate
+              ? new Date(filter.toDate)
+              : filter.fromDate
+                ? new Date(filter.fromDate) // Mặc định bắt đầu từ "từ ngày"
+                : new Date()
+          }
           mode="date"
           minimumDate={filter.fromDate ? new Date(filter.fromDate) : undefined}
+          // Bỏ maximumDate để có thể chọn ngày trong tương lai
           onChange={(event, date) => {
             setShowToPicker(false);
             if (event.type === "set" && date) {
@@ -515,175 +557,96 @@ export default function ActivityLogScreen() {
         />
       )}
 
-      {/* Action Filter Modal */}
-      <Modal
-        visible={showActionModal}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setShowActionModal(false)}
-      >
-        <BlurView intensity={20} style={styles.modalOverlay}>
-          <Pressable
-            style={styles.modalPressable}
-            onPress={() => setShowActionModal(false)}
-          >
-            <Pressable style={styles.modalContent}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Lọc theo hành động</Text>
-                <TouchableOpacity onPress={() => setShowActionModal(false)}>
-                  <Ionicons name="close" size={24} color="#64748B" />
-                </TouchableOpacity>
-              </View>
+      {/* ACTION MODAL */}
+      <Modal visible={showActionModal} transparent animationType="slide">
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => setShowActionModal(false)}
+        >
+          <Pressable style={styles.modal}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Lọc theo hành động</Text>
+              <TouchableOpacity onPress={() => setShowActionModal(false)}>
+                <Ionicons name="close" size={22} color="#64748B" />
+              </TouchableOpacity>
+            </View>
 
-              <ScrollView
-                style={styles.modalBody}
-                showsVerticalScrollIndicator={false}
+            <ScrollView style={styles.modalBody}>
+              {Object.keys(actionConfig).map((a) => {
+                const checked = filter.actions.includes(a);
+                const config = actionConfig[a];
+
+                return (
+                  <TouchableOpacity
+                    key={a}
+                    style={[
+                      styles.modalItem,
+                      checked && styles.modalItemActive,
+                    ]}
+                    onPress={() => toggleAction(a)}
+                  >
+                    <View
+                      style={[styles.dot, { backgroundColor: config.color }]}
+                    />
+                    <Text
+                      style={[
+                        styles.modalItemText,
+                        checked && styles.modalItemTextActive,
+                      ]}
+                    >
+                      {config.label}
+                    </Text>
+                    {checked && (
+                      <Ionicons
+                        name="checkmark-circle"
+                        size={20}
+                        color="#3B82F6"
+                      />
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+
+            <View style={styles.modalFooter}>
+              <TouchableOpacity
+                style={styles.modalFooterBtn}
+                onPress={clearActions}
               >
-                {Object.entries(actionConfig).map(
-                  ([key, config]: [string, any]) => {
-                    const isSelected = filter.actions.includes(key);
-
-                    return (
-                      <TouchableOpacity
-                        key={key}
-                        style={[
-                          styles.actionItem,
-                          isSelected && styles.actionItemSelected,
-                        ]}
-                        onPress={() => toggleAction(key)}
-                      >
-                        <View
-                          style={[
-                            styles.actionItemDot,
-                            { backgroundColor: config.color },
-                          ]}
-                        />
-                        <Text
-                          style={[
-                            styles.actionItemText,
-                            isSelected && styles.actionItemTextSelected,
-                          ]}
-                        >
-                          {config.label}
-                        </Text>
-                        {isSelected && (
-                          <Ionicons
-                            name="checkmark-circle"
-                            size={20}
-                            color="#3B82F6"
-                          />
-                        )}
-                      </TouchableOpacity>
-                    );
-                  },
-                )}
-              </ScrollView>
-
-              <View style={styles.modalFooter}>
-                <TouchableOpacity
-                  style={styles.modalButton}
-                  onPress={() => {
-                    onChangeFilter("actions", []);
-                    setShowActionModal(false);
-                  }}
+                <Text style={styles.modalFooterBtnText}>Đặt lại</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalFooterBtn, styles.modalFooterBtnPrimary]}
+                onPress={() => setShowActionModal(false)}
+              >
+                <Text
+                  style={[
+                    styles.modalFooterBtnText,
+                    styles.modalFooterBtnTextPrimary,
+                  ]}
                 >
-                  <Text style={styles.modalButtonText}>Đặt lại</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.modalButton, styles.modalButtonPrimary]}
-                  onPress={() => setShowActionModal(false)}
-                >
-                  <Text style={styles.modalButtonTextPrimary}>Áp dụng</Text>
-                </TouchableOpacity>
-              </View>
-            </Pressable>
+                  Áp dụng
+                </Text>
+              </TouchableOpacity>
+            </View>
           </Pressable>
-        </BlurView>
+        </Pressable>
       </Modal>
     </SafeAreaView>
   );
 }
 
-// Component phụ cho Filter Tag
-const FilterTag = ({ label, color, onRemove }: any) => (
-  <View style={[styles.filterTag, color && { borderColor: color }]}>
-    <Text style={[styles.filterTagText, color && { color }]}>{label}</Text>
-    <TouchableOpacity onPress={onRemove} style={styles.filterTagRemove}>
-      <Ionicons name="close" size={14} color={color || "#64748B"} />
-    </TouchableOpacity>
-  </View>
-);
-
-// Component phụ cho Filter Section
-const FilterSection = ({
-  filter,
-  onChangeFilter,
-  onShowActionModal,
-  onShowFromPicker,
-  onShowToPicker,
-}: any) => (
-  <View style={styles.filterSection}>
-    <View style={styles.filterField}>
-      <Text style={styles.filterLabel}>Người dùng</Text>
-      <View style={styles.filterInputWrapper}>
-        <Ionicons name="person-outline" size={18} color="#94A3B8" />
-        <TextInput
-          placeholder="Tìm theo tên hoặc email..."
-          placeholderTextColor="#94A3B8"
-          value={filter.user}
-          onChangeText={(t) => onChangeFilter("user", t)}
-          style={styles.filterInput}
-        />
-      </View>
-    </View>
-
-    <View style={styles.filterField}>
-      <Text style={styles.filterLabel}>Thời gian</Text>
-      <View style={styles.dateRangeContainer}>
-        <TouchableOpacity style={styles.dateInput} onPress={onShowFromPicker}>
-          <Ionicons name="calendar-outline" size={18} color="#94A3B8" />
-          <Text
-            style={[
-              styles.dateInputText,
-              !filter.fromDate && styles.dateInputPlaceholder,
-            ]}
-          >
-            {filter.fromDate || "Từ ngày"}
-          </Text>
-        </TouchableOpacity>
-
-        <Text style={styles.dateRangeArrow}>→</Text>
-
-        <TouchableOpacity style={styles.dateInput} onPress={onShowToPicker}>
-          <Ionicons name="calendar-outline" size={18} color="#94A3B8" />
-          <Text
-            style={[
-              styles.dateInputText,
-              !filter.toDate && styles.dateInputPlaceholder,
-            ]}
-          >
-            {filter.toDate || "Đến ngày"}
-          </Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-
-    <View style={styles.filterField}>
-      <Text style={styles.filterLabel}>Hành động</Text>
-      <TouchableOpacity
-        style={styles.actionFilterButton}
-        onPress={onShowActionModal}
-      >
-        <Ionicons name="flash-outline" size={18} color="#64748B" />
-        <Text style={styles.actionFilterButtonText}>
-          {filter.actions.length === 0
-            ? "Chọn loại hành động"
-            : `Đã chọn ${filter.actions.length} hành động`}
-        </Text>
-        <Ionicons name="chevron-forward" size={18} color="#CBD5E1" />
-      </TouchableOpacity>
-    </View>
-  </View>
+// Tag Component
+const Tag = ({ label, color, onPress }: any) => (
+  <TouchableOpacity
+    style={[styles.tag, color && { borderColor: color }]}
+    onPress={onPress}
+  >
+    <Text style={[styles.tagText, color && { color }]} numberOfLines={1}>
+      {label}
+    </Text>
+    <Ionicons name="close" size={14} color={color || "#64748B"} />
+  </TouchableOpacity>
 );
 
 const styles = StyleSheet.create({
@@ -692,50 +655,45 @@ const styles = StyleSheet.create({
     backgroundColor: "#F8FAFC",
   },
 
-  // Header Styles
+  // Header
   header: {
     backgroundColor: "#FFFFFF",
+    paddingHorizontal: 12,
+    paddingTop: 12,
+    paddingBottom: 8,
     borderBottomWidth: 1,
     borderBottomColor: "#F1F5F9",
   },
-  headerGradient: {
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 16,
-  },
-  searchContainer: {
+  searchRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    gap: 8,
   },
   searchWrapper: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#F1F5F9",
-    borderRadius: 12,
+    borderRadius: 10,
     paddingHorizontal: 12,
-    height: 44,
-  },
-  searchIcon: {
-    marginRight: 8,
+    height: 40,
+    gap: 8,
   },
   searchInput: {
     flex: 1,
-    fontSize: 15,
+    fontSize: 13,
     color: "#0F172A",
     padding: 0,
   },
-  filterButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
+  filterBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
     backgroundColor: "#F1F5F9",
     justifyContent: "center",
     alignItems: "center",
-    position: "relative",
   },
-  filterButtonActive: {
+  filterBtnActive: {
     backgroundColor: "#3B82F6",
   },
   filterBadge: {
@@ -757,15 +715,15 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 
-  // Filter Tags
-  filterTagsContainer: {
-    marginTop: 12,
+  // Tags
+  tagScroll: {
+    marginTop: 8,
   },
-  filterTagsContent: {
-    paddingRight: 16,
+  tagContent: {
     gap: 8,
+    paddingRight: 12,
   },
-  filterTag: {
+  tag: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#FFFFFF",
@@ -775,23 +733,22 @@ const styles = StyleSheet.create({
     paddingLeft: 12,
     paddingRight: 8,
     paddingVertical: 6,
+    gap: 6,
   },
-  filterTagText: {
-    fontSize: 13,
+  tagText: {
+    fontSize: 12,
     color: "#64748B",
-    marginRight: 4,
-  },
-  filterTagRemove: {
-    padding: 2,
+    maxWidth: 150,
   },
   clearAllTag: {
     backgroundColor: "#FEE2E2",
     borderRadius: 20,
     paddingHorizontal: 14,
     paddingVertical: 6,
+    justifyContent: "center",
   },
   clearAllText: {
-    fontSize: 13,
+    fontSize: 12,
     color: "#EF4444",
     fontWeight: "600",
   },
@@ -799,92 +756,72 @@ const styles = StyleSheet.create({
   // Filter Panel
   filterPanel: {
     backgroundColor: "#FFFFFF",
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 20,
-    borderTopWidth: 1,
-    borderTopColor: "#F1F5F9",
-  },
-  filterSection: {
-    gap: 16,
-  },
-  filterField: {
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F1F5F9",
     gap: 8,
   },
   filterLabel: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: "600",
     color: "#475569",
-    letterSpacing: 0.3,
+    marginTop: 4,
   },
-  filterInputWrapper: {
+  inputWrapper: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#F8FAFC",
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    height: 44,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    height: 40,
     borderWidth: 1,
     borderColor: "#E2E8F0",
+    gap: 8,
   },
   filterInput: {
     flex: 1,
-    marginLeft: 8,
-    fontSize: 14,
+    fontSize: 13,
     color: "#0F172A",
+    padding: 0,
   },
-  dateRangeContainer: {
+  dateRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
   },
-  dateInput: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#F8FAFC",
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    height: 44,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-  },
-  dateInputText: {
-    marginLeft: 8,
-    fontSize: 14,
-    color: "#0F172A",
-  },
-  dateInputPlaceholder: {
+  placeholder: {
     color: "#94A3B8",
   },
-  dateRangeArrow: {
+  dateArrow: {
     fontSize: 16,
     color: "#CBD5E1",
     fontWeight: "600",
   },
-  actionFilterButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#F8FAFC",
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    height: 44,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-  },
-  actionFilterButtonText: {
+  actionFilterText: {
     flex: 1,
-    marginLeft: 8,
-    fontSize: 14,
+    fontSize: 13,
     color: "#0F172A",
+  },
+
+  // Search Status
+  searchStatus: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    backgroundColor: "#F0F9FF",
+  },
+  searchStatusText: {
+    fontSize: 12,
+    color: "#0369A1",
+    fontStyle: "italic",
   },
 
   // Date Header
   dateHeader: {
     flexDirection: "row",
     alignItems: "center",
-    marginVertical: 16,
-    paddingHorizontal: 16,
+    marginVertical: 12,
+    paddingHorizontal: 12,
   },
   dateLine: {
     flex: 1,
@@ -894,146 +831,105 @@ const styles = StyleSheet.create({
   dateBadge: {
     backgroundColor: "#F1F5F9",
     paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    marginHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 16,
+    marginHorizontal: 10,
   },
   dateText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: "600",
     color: "#475569",
   },
 
-  // Log Card
-  logCard: {
+  // Card
+  card: {
     backgroundColor: "#FFFFFF",
-    marginHorizontal: 16,
-    marginBottom: 12,
-    borderRadius: 16,
-    padding: 16,
-    shadowColor: "#0F172A",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 2,
+    marginHorizontal: 12,
+    marginBottom: 8,
+    padding: 12,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: "#F1F5F9",
+    shadowColor: "#000",
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 2,
   },
-  logCardHeader: {
+  cardHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    marginBottom: 12,
-  },
-  userSection: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-  },
-  avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 12,
-  },
-  avatarText: {
-    fontSize: 16,
-    fontWeight: "700",
+    marginBottom: 8,
   },
   userInfo: {
     flex: 1,
+    marginRight: 8,
   },
   userName: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#0F172A",
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#111827",
     marginBottom: 2,
   },
   userEmail: {
     fontSize: 12,
-    color: "#64748B",
+    color: "#6B7280",
+  },
+  timeContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    flexShrink: 0,
+  },
+  timeText: {
+    fontSize: 11,
+    color: "#9CA3AF",
+  },
+  cardBody: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 4,
+    gap: 8,
   },
   actionBadge: {
-    flexDirection: "row",
-    alignItems: "center",
     paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingVertical: 4,
     borderRadius: 20,
   },
-  actionDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    marginRight: 6,
-  },
   actionText: {
-    fontSize: 12,
+    color: "#FFFFFF",
+    fontSize: 11,
     fontWeight: "600",
   },
-  logCardBody: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 12,
-    gap: 8,
-    flexWrap: "wrap",
-  },
-  orderInfo: {
-    flex: 1,
+  orderBox: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#EFF6FF",
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
     borderRadius: 8,
-    minWidth: 0, 
-  },
-  orderCode: {
-    marginLeft: 6,
-    fontSize: 13,
-    fontWeight: "500",
-    color: "#3B82F6",
     flex: 1,
   },
-  timeInfo: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#F8FAFC",
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-    borderRadius: 8,
-    flexShrink: 0, 
-  },
-  timeItem: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  timeDivider: {
-    width: 1,
-    height: 12,
-    backgroundColor: "#E2E8F0",
-    marginHorizontal: 6,
-  },
-  timeText: {
+  orderText: {
     marginLeft: 4,
-    fontSize: 11,
-    color: "#64748B",
+    fontSize: 12,
+    color: "#3B82F6",
     fontWeight: "500",
+    flex: 1,
   },
-  detailsContainer: {
+  detailBox: {
+    marginTop: 8,
     backgroundColor: "#F8FAFC",
-    padding: 12,
-    borderRadius: 10,
+    padding: 10,
+    borderRadius: 8,
   },
-  detailsText: {
+  detailText: {
     fontSize: 13,
-    lineHeight: 20,
-    color: "#334155",
+    color: "#374151",
+    lineHeight: 18,
   },
 
-  // List Content
+  // List
   listContent: {
     flexGrow: 1,
     paddingBottom: 20,
@@ -1046,142 +942,118 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 32,
     paddingTop: 80,
-  },
-  emptyIconContainer: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: "#F1F5F9",
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 20,
+    gap: 8,
   },
   emptyTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "600",
     color: "#334155",
-    marginBottom: 8,
+    marginTop: 16,
   },
   emptySubtitle: {
-    fontSize: 14,
+    fontSize: 13,
     color: "#94A3B8",
     textAlign: "center",
-    lineHeight: 20,
-  },
-  emptyResetButton: {
-    marginTop: 20,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    backgroundColor: "#3B82F6",
-    borderRadius: 10,
-  },
-  emptyResetText: {
-    color: "#FFFFFF",
-    fontWeight: "600",
   },
 
   // Footer
   footer: {
     paddingVertical: 20,
     alignItems: "center",
+    gap: 6,
   },
-  endLine: {
-    width: 40,
-    height: 1,
-    backgroundColor: "#E2E8F0",
+  footerText: {
+    fontSize: 13,
+    color: "#6B7280",
   },
-  endText: {
-    fontSize: 12,
-    color: "#CBD5E1",
-    marginVertical: 8,
+  footerDone: {
+    fontSize: 13,
+    color: "#9CA3AF",
+    fontStyle: "italic",
   },
 
   // Modal
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.4)",
+    backgroundColor: "rgba(0,0,0,0.4)",
     justifyContent: "flex-end",
   },
-  modalPressable: {
-    flex: 1,
-    justifyContent: "flex-end",
-  },
-  modalContent: {
+  modal: {
     backgroundColor: "#FFFFFF",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    maxHeight: "80%",
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: "70%",
   },
   modalHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 18,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     borderBottomWidth: 1,
     borderBottomColor: "#F1F5F9",
   },
   modalTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "700",
     color: "#0F172A",
   },
   modalBody: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
   },
-  actionItem: {
+  modalItem: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 14,
+    paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: "#F8FAFC",
   },
-  actionItemSelected: {
+  modalItemActive: {
     backgroundColor: "#F0F9FF",
-    marginHorizontal: -20,
-    paddingHorizontal: 20,
+    marginHorizontal: -16,
+    paddingHorizontal: 16,
   },
-  actionItemDot: {
+  dot: {
     width: 10,
     height: 10,
     borderRadius: 5,
-    marginRight: 12,
+    marginRight: 10,
   },
-  actionItemText: {
+  modalItemText: {
     flex: 1,
-    fontSize: 15,
+    fontSize: 14,
     color: "#334155",
   },
-  actionItemTextSelected: {
+  modalItemTextActive: {
     color: "#0F172A",
     fontWeight: "500",
   },
   modalFooter: {
     flexDirection: "row",
-    gap: 12,
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    gap: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     borderTopWidth: 1,
     borderTopColor: "#F1F5F9",
   },
-  modalButton: {
+  modalFooterBtn: {
     flex: 1,
-    height: 48,
+    height: 42,
     justifyContent: "center",
     alignItems: "center",
-    borderRadius: 12,
+    borderRadius: 10,
     backgroundColor: "#F1F5F9",
   },
-  modalButtonPrimary: {
+  modalFooterBtnPrimary: {
     backgroundColor: "#3B82F6",
   },
-  modalButtonText: {
-    fontSize: 15,
+  modalFooterBtnText: {
+    fontSize: 14,
     fontWeight: "600",
     color: "#64748B",
   },
-  modalButtonTextPrimary: {
+  modalFooterBtnTextPrimary: {
     color: "#FFFFFF",
   },
 });
