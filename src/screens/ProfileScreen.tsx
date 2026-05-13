@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -16,13 +16,16 @@ import LinearGradient from "react-native-linear-gradient";
 import { logoutStorage } from "../store/auth.store";
 import { getAvatarColorById } from "../utils/avatar";
 import { useAuth } from "../contexts/AuthContext";
-import { EvilIcons } from "@expo/vector-icons";
+import { EvilIcons, Ionicons } from "@expo/vector-icons";
+import { settingService } from "../services/setting.service";
+import { useFocusEffect } from "@react-navigation/native";
 
 const { width } = Dimensions.get("window");
 const isTablet = width >= 768;
 
 export default function ProfileScreen({ navigation }: any) {
   const { user, setUser } = useAuth();
+  const [showDemoButton, setShowDemoButton] = useState(false);
 
   const handleLogout = () => {
     Alert.alert(
@@ -57,6 +60,28 @@ export default function ProfileScreen({ navigation }: any) {
     }
   };
 
+  useEffect(() => {
+    loadSettings();
+  }, []);
+
+  useFocusEffect(
+      useCallback(() => {
+        loadSettings();
+      }, []),
+    );
+
+  const loadSettings = async () => {
+    try {
+      const res = await settingService.getSystemSettingsApi();
+
+      const showDemo = res?.data?.show_demo_lookup === "1";
+
+      setShowDemoButton(showDemo);
+    } catch (err) {
+      console.log(err);
+    }
+  };
+
   const firstLetter = user?.name ? user.name.charAt(0).toUpperCase() : "?";
   const avatarColor = getAvatarColorById(user?.id);
 
@@ -86,7 +111,10 @@ export default function ProfileScreen({ navigation }: any) {
               style={styles.avatarGradient}
             >
               {user?.avatar ? (
-                <Image source={{ uri: user.avatar }} style={styles.avatarImage} />
+                <Image
+                  source={{ uri: user.avatar }}
+                  style={styles.avatarImage}
+                />
               ) : (
                 <View
                   style={[
@@ -103,28 +131,41 @@ export default function ProfileScreen({ navigation }: any) {
           {/* USER DETAILS */}
           <View style={styles.userInfoContainer}>
             <Text style={styles.userName}>{user?.name || "Người dùng"}</Text>
-            
-            <View style={styles.emailContainer}>
-              <EvilIcons name="envelope" size={isTablet ? 16 : 14} color="#94a3b8" />
-              <Text style={styles.userEmail}>{user?.email || "Không có email"}</Text>
-            </View>
 
-          {/* <LinearGradient
-                        colors={["#667eea", "#764ba2"]}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 0 }}
-                        style={styles.roleContainer}
-                      >
-                        <Text style={styles.roleLabel} numberOfLines={1} ellipsizeMode="tail">
-                          {getRoleLabel(user?.position) || "Nhân viên"}
-                        </Text>
-                      </LinearGradient> */}
+            <View style={styles.emailContainer}>
+              <EvilIcons
+                name="envelope"
+                size={isTablet ? 16 : 14}
+                color="#94a3b8"
+              />
+              <Text style={styles.userEmail}>
+                {user?.email || "Không có email"}
+              </Text>
+            </View>
+            {!showDemoButton && (
+              <View style={styles.roleContainer}>
+                <Ionicons
+                  name="shield-checkmark"
+                  size={14}
+                  color="#2563eb"
+                  style={{ marginRight: 6 }}
+                />
+
+                <Text
+                  style={styles.roleLabel}
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                >
+                  {getRoleLabel(user?.position) || "Nhân viên"}
+                </Text>
+              </View>
+            )}
           </View>
         </View>
 
         {/* MENU SECTION */}
         <View style={styles.menuContainer}>
-          <Text style={styles.menuHeader}>TÀI KHOẢN</Text>
+          <Text style={styles.menuHeader}>THÔNG TIN</Text>
 
           {/* <TouchableOpacity
                       style={styles.menuItem}
@@ -166,15 +207,27 @@ export default function ProfileScreen({ navigation }: any) {
             onPress={() => navigation.navigate("GuideScreen")}
           >
             <View style={styles.menuItemLeft}>
-              <View style={[styles.iconContainer, { backgroundColor: "#fef3c7" }]}>
-                <EvilIcons name="question" size={isTablet ? 24 : 20} color="#d97706" />
+              <View
+                style={[styles.iconContainer, { backgroundColor: "#fef3c7" }]}
+              >
+                <EvilIcons
+                  name="question"
+                  size={isTablet ? 24 : 20}
+                  color="#d97706"
+                />
               </View>
               <View style={styles.menuItemContent}>
                 <Text style={styles.menuItemTitle}>Hỗ trợ</Text>
-                <Text style={styles.menuItemSubtitle}>Hướng dẫn sử dụng ứng dụng</Text>
+                <Text style={styles.menuItemSubtitle}>
+                  Hướng dẫn sử dụng ứng dụng
+                </Text>
               </View>
             </View>
-            <EvilIcons name="chevron-right" size={isTablet ? 28 : 24} color="#cbd5e1" />
+            <EvilIcons
+              name="chevron-right"
+              size={isTablet ? 28 : 24}
+              color="#cbd5e1"
+            />
           </TouchableOpacity>
         </View>
 
@@ -184,8 +237,7 @@ export default function ProfileScreen({ navigation }: any) {
           activeOpacity={0.8}
           onPress={handleLogout}
         >
-            <Text style={styles.logoutText}>Đăng xuất tài khoản</Text>
-        
+          <Text style={styles.logoutText}>Đăng xuất tài khoản</Text>
         </TouchableOpacity>
 
         {/* VERSION INFO */}
@@ -351,27 +403,30 @@ const styles = StyleSheet.create({
   },
 
   roleContainer: {
-    paddingHorizontal: isTablet ? 20 : 16,
-    paddingVertical: isTablet ? 10 : 8,
-    borderRadius: 20,
-    minWidth: isTablet ? 200 : 140,
+    flexDirection: "row",
+    alignItems: "center",
     alignSelf: "center",
-    shadowColor: "#667eea",
-    shadowOffset: {
-      width: 0,
-      height: 1.5,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 3,
+
+    backgroundColor: "#eff6ff",
+    borderWidth: 1,
+    borderColor: "#bfdbfe",
+
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+
+    borderRadius: 999,
+
+    shadowColor: "#2563eb",
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 2,
   },
 
   roleLabel: {
-    color: "#ffffff",
-    fontSize: isTablet ? 14 : 12,
-    fontWeight: "600",
-    letterSpacing: 0.5,
-    textAlign: "center",
+    color: "#1d4ed8",
+    fontSize: 13,
+    fontWeight: "700",
+    letterSpacing: 0.2,
   },
 
   // Menu Section
@@ -466,9 +521,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 6,
     elevation: 4,
-      height: 48,
-          justifyContent: "center",
-          alignItems: "center",
+    height: 48,
+    justifyContent: "center",
+    alignItems: "center",
     backgroundColor: "#dc2626",
   },
 

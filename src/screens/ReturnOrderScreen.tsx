@@ -144,7 +144,7 @@ export default function ReturnOrderScreen({ route }: any) {
       setLoadingText("Đang upload dữ liệu...");
       await orderService.shipperReturn(id, status, images, location, reason);
 
-      stopTracking();
+      // stopTracking();
 
       setNotify({
         visible: true,

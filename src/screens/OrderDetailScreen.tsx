@@ -356,9 +356,9 @@ export default function OrderDetailScreen({ route }: any) {
     try {
       await orderService.shipperAccept(id, attachments, "");
 
-      await sendCurrentLocationOnce(id);
+      // await sendCurrentLocationOnce(id);
 
-      await startTracking(id);
+      // await startTracking(id);
 
       setNotify({
         visible: true,
@@ -382,7 +382,7 @@ export default function OrderDetailScreen({ route }: any) {
     try {
       await orderService.shipperAcceptPick(id);
 
-      await startTracking(id);
+      // await startTracking(id);
 
       setNotify({
         visible: true,

@@ -303,7 +303,7 @@ export default function CompleteOrderScreen({ route }: any) {
         missingNote,
       );
 
-      stopTracking();
+      // stopTracking();
 
       setNotify({
         visible: true,
