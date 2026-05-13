@@ -10,6 +10,7 @@ import {
 import { useRoute } from "@react-navigation/native";
 import { actionConfig } from "../utils/statusOrder";
 import { logService } from "../services/log.service";
+import { Ionicons } from "@expo/vector-icons";
 
 export default function OrderLogsScreen() {
   const route = useRoute<any>();
@@ -49,13 +50,10 @@ export default function OrderLogsScreen() {
   const renderItem = ({ item, index }: any) => {
     const action = actionConfig[item.action] || {
       label: item.action,
-      color: "#64748B", // fallback màu xám đẹp
+      color: "#64748B",
     };
 
     const isLast = index === logs.length - 1;
-    const userInitial = item.userName
-      ? item.userName.charAt(0).toUpperCase()
-      : "S";
 
     return (
       <View style={styles.row}>
@@ -69,15 +67,18 @@ export default function OrderLogsScreen() {
         <View style={[styles.card, isLast && styles.lastCard]}>
           <View style={styles.headerRow}>
             <View style={styles.userInfo}>
-              <Text style={styles.userName}>{item.userName || "Hệ thống"}</Text>
+              <Text style={styles.userName} numberOfLines={1}>
+                {item.userName || "Hệ thống"}
+              </Text>
             </View>
 
             <View
               style={[
                 styles.badge,
-                { backgroundColor: `${action.color}15` }, 
+                { backgroundColor: `${action.color}15` },
               ]}
             >
+              <View style={[styles.badgeDot, { backgroundColor: action.color }]} />
               <Text style={[styles.badgeText, { color: action.color }]}>
                 {action.label}
               </Text>
@@ -85,7 +86,7 @@ export default function OrderLogsScreen() {
           </View>
 
           <View style={styles.timeContainer}>
-            <Text style={styles.timeIcon}>🕒</Text>
+            <Ionicons name="time-outline" size={11} color="#94A3B8" />
             <Text style={styles.timeText}>
               {new Date(item.timestamp).toLocaleString("vi-VN", {
                 hour12: false,
@@ -102,14 +103,16 @@ export default function OrderLogsScreen() {
             <>
               <View style={styles.divider} />
               <View style={styles.detailsContainer}>
-                <Text style={styles.detailsText}>{item.details}</Text>
+                <Text style={styles.detailsText} numberOfLines={3}>
+                  {item.details}
+                </Text>
               </View>
             </>
           )}
 
-          {/* Có thể thêm IP hoặc Device nếu có trong logs */}
           {item.ipAddress && (
             <View style={styles.metaRow}>
+              <Ionicons name="globe-outline" size={10} color="#94A3B8" />
               <Text style={styles.metaText}>IP: {item.ipAddress}</Text>
             </View>
           )}
@@ -121,7 +124,7 @@ export default function OrderLogsScreen() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#3B82F6" />
+        <ActivityIndicator size="small" color="#3B82F6" />
       </View>
     );
   }
@@ -129,6 +132,7 @@ export default function OrderLogsScreen() {
   if (!loading && logs.length === 0) {
     return (
       <View style={styles.emptyContainer}>
+        <Ionicons name="document-text-outline" size={40} color="#CBD5E1" />
         <Text style={styles.emptyText}>Không có lịch sử thao tác</Text>
         <Text style={styles.emptySubtext}>Dữ liệu sẽ xuất hiện tại đây</Text>
       </View>
@@ -167,44 +171,41 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#F8FAFC",
     paddingHorizontal: 24,
+    gap: 8,
   },
   emptyText: {
-    fontSize: 15,
+    fontSize: 14,
     color: "#94A3B8",
     fontWeight: "500",
     textAlign: "center",
-    marginTop: 8,
   },
   emptySubtext: {
-    fontSize: 13,
+    fontSize: 12,
     color: "#CBD5E1",
-    marginTop: 4,
   },
 
-  // --- List Container ---
+  // List Container
   listContent: {
-    paddingHorizontal: 16,
-    paddingTop: 20,
-    paddingBottom: 32,
+    paddingHorizontal: 12,
+    paddingTop: 16,
+    paddingBottom: 24,
   },
 
-  // --- Timeline Row ---
+  // Timeline Row
   row: {
     flexDirection: "row",
-    marginBottom: 0, // margin sẽ được xử lý bởi line bên dưới để tránh khoảng trắng thừa
   },
   timelineContainer: {
-    width: 32,
+    width: 28,
     alignItems: "center",
   },
   dot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    marginTop: 4,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    marginTop: 3,
     borderWidth: 2,
     borderColor: "#FFFFFF",
-    // Shadow cho dot để nổi bật hơn
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
@@ -215,122 +216,109 @@ const styles = StyleSheet.create({
     width: 2,
     flex: 1,
     backgroundColor: "#E2E8F0",
-    marginTop: 4,
+    marginTop: 3,
     borderRadius: 1,
   },
 
-  // --- Card Content ---
+  // Card Content
   card: {
     flex: 1,
     backgroundColor: "#FFFFFF",
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderRadius: 16,
-    marginBottom: 20,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    marginBottom: 16,
     marginLeft: 4,
-    // Modern Shadow (Soft & Deep)
     shadowColor: "#0F172A",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.04,
-    shadowRadius: 12,
-    elevation: 3,
-    // Subtle Border
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 8,
+    elevation: 2,
     borderWidth: 0.5,
     borderColor: "#F1F5F9",
   },
-  // Điều chỉnh cho item cuối cùng để không có line kéo dài thừa
   lastCard: {
     marginBottom: 0,
   },
 
-  // --- Header Row (User & Badge) ---
+  // Header Row
   headerRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 6,
+    marginBottom: 4,
   },
   userInfo: {
     flexDirection: "row",
     alignItems: "center",
     flex: 1,
-  },
-  avatarPlaceholder: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: "#F1F5F9",
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 10,
-  },
-  avatarText: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: "#64748B",
+    marginRight: 8,
   },
   userName: {
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: "600",
     color: "#0F172A",
     letterSpacing: -0.2,
   },
 
-  // --- Badge ---
+  // Badge
   badge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
     borderRadius: 100,
-    // Nền sẽ được style inline dựa trên action.color + '20' (opacity)
+    gap: 4,
+    flexShrink: 0,
+  },
+  badgeDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
   },
   badgeText: {
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: "600",
     letterSpacing: -0.1,
-    // Màu sẽ được style inline
   },
 
-  // --- Time & Meta ---
+  // Time
   timeContainer: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 6,
-  },
-  timeIcon: {
-    marginRight: 4,
-    opacity: 0.6,
+    marginBottom: 4,
+    gap: 4,
   },
   timeText: {
-    fontSize: 13,
+    fontSize: 11,
     color: "#64748B",
     fontWeight: "500",
   },
 
-  // --- Details & Extra Info ---
+  // Details
   divider: {
     height: 1,
     backgroundColor: "#F1F5F9",
-    marginVertical: 10,
+    marginVertical: 8,
   },
   detailsContainer: {
     backgroundColor: "#F8FAFC",
-    padding: 12,
-    borderRadius: 12,
-    marginTop: 4,
+    padding: 10,
+    borderRadius: 8,
   },
   detailsText: {
-    fontSize: 13,
-    lineHeight: 20,
+    fontSize: 12,
+    lineHeight: 18,
     color: "#334155",
   },
   metaRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: 8,
+    marginTop: 6,
+    gap: 4,
   },
   metaText: {
-    fontSize: 12,
+    fontSize: 10,
     color: "#94A3B8",
-    marginLeft: 4,
   },
 });

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -58,30 +58,23 @@ export default function DashboardScreen({ navigation }: any) {
 
   const isNVGN = user?.role === "NVGN";
   const [showPicker, setShowPicker] = useState(false);
-  const [currentTime, setCurrentTime] = useState(new Date());
 
   const [tooltip, setTooltip] = useState<{
     index: number;
     type: string;
   } | null>(null);
 
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, []);
+  const currentTimeRef = useRef(new Date());
 
   const getGreeting = () => {
-    const hour = currentTime.getHours();
+    const hour = currentTimeRef.current.getHours();
     if (hour < 12) return "Chào buổi sáng";
     if (hour < 18) return "Chào buổi chiều";
     return "Chào buổi tối";
   };
 
   const getGreetingIcon = () => {
-    const hour = currentTime.getHours();
+    const hour = currentTimeRef.current.getHours();
     if (hour < 12) return "sunny-outline";
     if (hour < 18) return "partly-sunny-outline";
     return "moon-outline";
@@ -249,7 +242,7 @@ export default function DashboardScreen({ navigation }: any) {
                 </View>
               </View>
             </View>
-            <View style={styles.headerBottom}>
+            {/* <View style={styles.headerBottom}>
               <View style={styles.headerBadge}>
                 <View style={styles.badgeDot} />
                 <Text style={styles.badgeText}>Hệ thống đang hoạt động</Text>
@@ -273,7 +266,7 @@ export default function DashboardScreen({ navigation }: any) {
                   </Text>
                 </View>
               </View>
-            </View>
+            </View> */}
           </LinearGradient>
 
           {isNVGN && (
@@ -981,7 +974,7 @@ const styles = StyleSheet.create({
     marginTop: -16,
     marginBottom: 20,
     paddingTop: 20,
-    paddingBottom: 24,
+    // paddingBottom: 24,
     paddingHorizontal: 20,
     borderBottomLeftRadius: 32,
     borderBottomRightRadius: 32,
@@ -997,22 +990,22 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "flex-start",
     marginBottom: 20,
-    flexWrap: "wrap", 
-    gap: 12, 
+    flexWrap: "wrap",
+    gap: 12,
   },
 
   greetingContainer: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    flexShrink: 1, 
+    flexShrink: 1,
   },
 
   userName: {
     fontSize: 20,
     fontWeight: "800",
     color: "#fff",
-    flexShrink: 1, 
+    flexShrink: 1,
   },
 
   headerBadge: {
@@ -1023,16 +1016,16 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 20,
     gap: 6,
-    flexShrink: 0, 
+    flexShrink: 0,
   },
 
-  headerBottom:{
+  headerBottom: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     flexWrap: "wrap",
     gap: 12,
-  }, 
+  },
 
   iconCircle: {
     width: 56,

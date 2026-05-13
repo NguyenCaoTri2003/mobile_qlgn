@@ -1,12 +1,14 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { notificationService } from "../services/notification.service";
 
 export default function useNotifications() {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
-
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  
+  // Ref để lưu unreadCount hiện tại, tránh reset về 0 khi loading
+  const currentUnreadCount = useRef(0);
 
   const loadNotifications = async (pageNum = 1, loadMore = false) => {
     try {
@@ -23,8 +25,12 @@ export default function useNotifications() {
       setPage(pageNum);
       setTotalPages(res.totalPages || 1);
 
-      setUnreadCount(res.unreadCount || 0);
-
+      // Chỉ update unreadCount nếu có giá trị từ server
+      const newUnreadCount = res.unreadCount;
+      if (typeof newUnreadCount === "number" && newUnreadCount >= 0) {
+        setUnreadCount(newUnreadCount);
+        currentUnreadCount.current = newUnreadCount;
+      }
     } catch (err) {
       console.log("Notification error", err);
     }

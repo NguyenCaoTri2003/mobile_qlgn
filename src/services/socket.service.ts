@@ -75,6 +75,7 @@ export const connectSocket = (
     notificationRead?: (data: any) => void;
     notificationReadAll?: () => void;
     dashboardUpdate?: () => void;
+    notificationReadByOrder?: (data: { orderId: string; message?: string }) => void;
   },
 ) => {
   if (!socket) {
@@ -116,6 +117,11 @@ export const connectSocket = (
   if (handlers?.notificationReadAll) {
     socket.off("notificationReadAll");
     socket.on("notificationReadAll", handlers.notificationReadAll);
+  }
+
+  if (handlers?.notificationReadByOrder) {
+    socket.off("notificationReadByOrder");
+    socket.on("notificationReadByOrder", handlers.notificationReadByOrder);
   }
 };
 

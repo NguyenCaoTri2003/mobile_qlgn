@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ActivityIndicator } from "react-native";
+import * as Notifications from "expo-notifications";
 
 import { useNotificationContext } from "../contexts/NotificationContext";
 import { notificationService } from "../services/notification.service";
@@ -39,7 +40,7 @@ export default function NotificationScreen() {
 
         return (
           <TouchableOpacity style={styles.readAllBtn} onPress={markAllAsRead}>
-            <Ionicons name="checkmark-done" size={14} color="#2563eb" />
+            <Ionicons name="checkmark-done" size={12} color="#2563eb" />
             <Text style={styles.readAllText}>Đọc tất cả</Text>
           </TouchableOpacity>
         );
@@ -50,6 +51,12 @@ export default function NotificationScreen() {
   const markAllAsRead = async () => {
     await notificationService.markAllRead();
     reload();
+
+    try {
+      await Notifications.setBadgeCountAsync(0);
+    } catch (err) {
+      console.log("Reset badge error:", err);
+    }
   };
 
   const onRefresh = async () => {
@@ -74,6 +81,15 @@ export default function NotificationScreen() {
   const handleOpen = async (item: any) => {
     if (item.read_status === 0) {
       await notificationService.markRead(item.id);
+
+      try {
+        const currentBadge = await Notifications.getBadgeCountAsync();
+        if (currentBadge > 0) {
+          await Notifications.setBadgeCountAsync(currentBadge - 1);
+        }
+      } catch (err) {
+        console.log("Update badge error:", err);
+      }
     }
 
     reload();
@@ -93,7 +109,7 @@ export default function NotificationScreen() {
         keyExtractor={(item) =>
           `${item.id}-${item.timestamp}-${item.order_id || ""}`
         }
-        contentContainerStyle={{ paddingTop: 10, paddingBottom: 20 }}
+        contentContainerStyle={{ paddingTop: 8, paddingBottom: 16 }}
         renderItem={({ item }) => (
           <NotificationCard
             item={{
@@ -123,7 +139,7 @@ export default function NotificationScreen() {
             return (
               <View style={styles.footer}>
                 <ActivityIndicator size="small" color="#2563eb" />
-                <Text style={{ marginTop: 6 }}>Đang tải thêm...</Text>
+                <Text style={styles.footerText}>Đang tải thêm...</Text>
               </View>
             );
           }
@@ -131,7 +147,7 @@ export default function NotificationScreen() {
           if (!hasMore && notifications.length > 0) {
             return (
               <View style={styles.footer}>
-                <Text style={{ color: "#9ca3af" }}>🎉 Bạn đã xem hết rồi</Text>
+                <Text style={styles.footerEndText}>🎉 Bạn đã xem hết rồi</Text>
               </View>
             );
           }
@@ -152,29 +168,37 @@ const styles = StyleSheet.create({
   readAllBtn: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
-
-    // backgroundColor: "#2563eb",
+    gap: 3,
     borderColor: "#2563eb",
     borderWidth: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
     borderRadius: 999,
-
     shadowColor: "#2563eb",
-    shadowOpacity: 0.25,
-    shadowRadius: 6,
-    elevation: 3,
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 2,
   },
 
   readAllText: {
     color: "#2563eb",
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "600",
   },
 
   footer: {
-    paddingVertical: 20,
+    paddingVertical: 16,
     alignItems: "center",
+  },
+
+  footerText: {
+    marginTop: 4,
+    fontSize: 12,
+    color: "#64748b",
+  },
+
+  footerEndText: {
+    color: "#9ca3af",
+    fontSize: 12,
   },
 });

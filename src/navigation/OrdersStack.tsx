@@ -17,7 +17,7 @@ export default function OrdersStack() {
       <Stack.Screen
         name="OrderList"
         component={OrderListScreen}
-        options={{ title: "Đơn giao nhận" }}
+        options={{ title: "Danh sách đơn giao nhận" }}
       />
 
       <Stack.Screen
