@@ -111,6 +111,7 @@ export default function OrderListScreen({ navigation, route }: any) {
     timeFilter: "",
     statusFilter: [] as string[],
     orderTypeFilter: "",
+
   });
 
   useEffect(() => {
@@ -922,6 +923,7 @@ export default function OrderListScreen({ navigation, route }: any) {
           <View style={{ flex: 1 }}>
             <Text
               style={[styles.orderCode, isQL && !isMyOrder && { marginLeft: 28 }]}
+
               numberOfLines={1}
               ellipsizeMode="tail"
             >
@@ -1222,7 +1224,7 @@ export default function OrderListScreen({ navigation, route }: any) {
                 {tab.label}
               </Text>
 
-              {tab.key === "PENDING_GROUP" && pendingOrdersCount > 0 && (
+              {/* {tab.key === "PENDING_GROUP" && pendingOrdersCount > 0 && (
                 <View style={styles.badge}>
                   <Text style={styles.badgeText}>
                     {pendingOrdersCount > 99 ? "99+" : pendingOrdersCount}
@@ -1317,6 +1319,7 @@ export default function OrderListScreen({ navigation, route }: any) {
               <Text style={[styles.tabText, getTabTextStyle()]}>
                 {tab.label}
               </Text>
+
             </TouchableOpacity>
           );
         })}

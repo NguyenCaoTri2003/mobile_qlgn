@@ -360,6 +360,7 @@
 //     </>
 //   );
 // }
+import 'react-native-gesture-handler';
 import React, { useState, useEffect, useCallback } from "react";
 import { AppState, Platform, View } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
@@ -558,6 +559,7 @@ function AppContent() {
             <OrderProvider>
               <NotificationProvider>
                 <NavigationContainer ref={navigationRef}>
+
                   <RootNavigator />
                 </NavigationContainer>
               </NotificationProvider>

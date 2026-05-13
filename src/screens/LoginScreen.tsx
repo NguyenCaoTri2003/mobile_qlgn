@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import {
   View,
@@ -27,6 +28,7 @@ export default function LoginScreen({ navigation }: any) {
   const [showPass, setShowPass] = useState(false);
   const { setUser, reloadUser } = useAuth();
   const [loading, setLoading] = useState(false);
+
   const [showDemoButton, setShowDemoButton] = useState(false);
 
   const onLogin = async () => {
@@ -77,6 +79,7 @@ export default function LoginScreen({ navigation }: any) {
     }
   };
 
+  
   return (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
@@ -145,7 +148,7 @@ export default function LoginScreen({ navigation }: any) {
                   <Text style={styles.buttonText}>Đăng nhập</Text>
                 )}
               </TouchableOpacity>
-
+              
               {showDemoButton && (
                 <TouchableOpacity
                   style={styles.demoBtn}
@@ -154,6 +157,7 @@ export default function LoginScreen({ navigation }: any) {
                   <Text style={styles.demoText}>Tra cứu đơn</Text>
                 </TouchableOpacity>
               )}
+
             </View>
             <Text style={styles.version}>Phiên bản hiện tại 1.1.4</Text>
           </View>

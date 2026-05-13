@@ -430,7 +430,7 @@ export default function DashboardScreen({ navigation }: any) {
               }
             />
 
-            {!isNVGN && (
+            {/* {!isNVGN && (
               <StatCard
                 style={styles.card}
                 title="Chờ tiếp nhận"
@@ -450,7 +450,7 @@ export default function DashboardScreen({ navigation }: any) {
                   })
                 }
               />
-            )}
+            )} */}
 
             <StatCard
               style={styles.card}
@@ -472,7 +472,7 @@ export default function DashboardScreen({ navigation }: any) {
               }
             />
 
-            <StatCard
+            {/* <StatCard
               style={styles.card}
               title="Đang thực hiện"
               value={stats?.processing}
@@ -677,7 +677,7 @@ export default function DashboardScreen({ navigation }: any) {
                   }
                 />
               </>
-            )}
+            )} */}
           </View>
 
           {(user?.role === "QL" || user?.role === "SUPERADMIN") && (
@@ -829,7 +829,7 @@ export default function DashboardScreen({ navigation }: any) {
           )}
 
           {/* DEPARTMENT */}
-          <View style={styles.deptBox}>
+          {/* <View style={styles.deptBox}>
             <Text style={styles.sectionTitle}>📊 Thống kê bộ phận</Text>
 
             <DeptBar
@@ -852,7 +852,7 @@ export default function DashboardScreen({ navigation }: any) {
               total={stats?.total}
               color="#14b8a6"
             />
-          </View>
+          </View> */}
         </ScrollView>
       </SafeAreaView>
     </View>
@@ -1002,7 +1002,7 @@ const styles = StyleSheet.create({
   },
 
   userName: {
-    fontSize: 20,
+    fontSize: 14,
     fontWeight: "800",
     color: "#fff",
     flexShrink: 1,

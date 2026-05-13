@@ -16,28 +16,42 @@ ENV['RCT_HERMES_V1_ENABLED'] ||= '1' if podfile_properties['expo.useHermesV1'] =
 
 platform :ios, podfile_properties['ios.deploymentTarget'] || '15.1'
 
-# ✅ FIX Firebase Swift pods
-use_modular_headers!
+use_modular_headers!   # 👈 THÊM DÒNG NÀY (QUAN TRỌNG)
 
 prepare_react_native_project!
 
 target 'NhGiaLogistics' do
   use_expo_modules!
+  
+  pod 'RNGestureHandler', :path => '../node_modules/react-native-gesture-handler'
 
-  config = use_native_modules!
+  if ENV['EXPO_USE_COMMUNITY_AUTOLINKING'] == '1'
+    config_command = ['node', '-e', "process.argv=['', '', 'config'];require('@react-native-community/cli').run()"];
+  else
+    config_command = [
+      'node',
+      '--no-warnings',
+      '--eval',
+      'require(\'expo/bin/autolinking\')',
+      'expo-modules-autolinking',
+      'react-native-config',
+      '--json',
+      '--platform',
+      'ios'
+    ]
+  end
 
-  # ❗ KHÔNG dùng dynamic frameworks (tránh conflict)
-  #use_frameworks! :linkage => :static
+  config = use_native_modules!(config_command)
+
+  use_frameworks! :linkage => podfile_properties['ios.useFrameworks'].to_sym if podfile_properties['ios.useFrameworks']
+  use_frameworks! :linkage => ENV['USE_FRAMEWORKS'].to_sym if ENV['USE_FRAMEWORKS']
 
   use_react_native!(
     :path => config[:reactNativePath],
     :hermes_enabled => podfile_properties['expo.jsEngine'] == nil || podfile_properties['expo.jsEngine'] == 'hermes',
     :app_path => "#{Pod::Config.instance.installation_root}/..",
-    :privacy_file_aggregation_enabled => 	['apple.privacyManifestAggregationEnabled'] != 'false',
+    :privacy_file_aggregation_enabled => podfile_properties['apple.privacyManifestAggregationEnabled'] != 'false',
   )
-
-  # ✅ FIX GoogleUtilities (Firebase)
-  pod 'GoogleUtilities', :modular_headers => true
 
   post_install do |installer|
     react_native_post_install(
