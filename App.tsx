@@ -1,3 +1,4 @@
+import 'react-native-gesture-handler';
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -15,6 +16,7 @@ import Toast, { BaseToast } from "react-native-toast-message";
 import { navigationRef, navigate } from "./src/navigation/navigationRef";
 import { notificationService } from "./src/services/notification.service";
 import { Ionicons } from "@expo/vector-icons";
+import { DemoScreen } from "./src/screens/DemoScreen";
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -105,7 +107,10 @@ function RootNavigator() {
       {user ? (
         <Stack.Screen name="Main" component={MainTabs} />
       ) : (
-        <Stack.Screen name="Login" component={LoginScreen} />
+           <>
+                    <Stack.Screen name="Login" component={LoginScreen} />
+                    <Stack.Screen name="DemoScreen" component={DemoScreen} />
+                  </>
       )}
     </Stack.Navigator>
   );
@@ -135,20 +140,7 @@ export default function App() {
             <OrderProvider>
               <NotificationProvider>
                 <NavigationContainer ref={navigationRef}>
-                  <RootNavigator />
-                  {/* <Stack.Navigator>
-                    <Stack.Screen
-                      name="Login"
-                      component={LoginScreen}
-                      options={{ headerShown: false }}
-                    />
-
-                    <Stack.Screen
-                      name="Main"
-                      component={MainTabs}
-                      options={{ headerShown: false }}
-                    />
-                  </Stack.Navigator> */}
+                    <RootNavigator />
                 </NavigationContainer>
               </NotificationProvider>
             </OrderProvider>

@@ -8,6 +8,7 @@ import {
   Alert,
   Dimensions,
   ScrollView,
+  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import LinearGradient from "react-native-linear-gradient";
@@ -18,6 +19,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { EvilIcons } from "@expo/vector-icons";
 
 const { width } = Dimensions.get("window");
+const isTablet = width >= 768;
 
 export default function ProfileScreen({ navigation }: any) {
   const { user, setUser } = useAuth();
@@ -103,18 +105,20 @@ export default function ProfileScreen({ navigation }: any) {
             <Text style={styles.userName}>{user?.name || "Người dùng"}</Text>
             
             <View style={styles.emailContainer}>
-              <EvilIcons name="envelope" size={16} color="#94a3b8" />
+              <EvilIcons name="envelope" size={isTablet ? 16 : 14} color="#94a3b8" />
               <Text style={styles.userEmail}>{user?.email || "Không có email"}</Text>
             </View>
 
-            <LinearGradient
-              colors={["#667eea", "#764ba2"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.roleContainer}
-            >
-              <Text style={styles.roleLabel}>{user?.position || "Nhân viên"}</Text>
-            </LinearGradient>
+          {/* <LinearGradient
+                        colors={["#667eea", "#764ba2"]}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 0 }}
+                        style={styles.roleContainer}
+                      >
+                        <Text style={styles.roleLabel} numberOfLines={1} ellipsizeMode="tail">
+                          {getRoleLabel(user?.position) || "Nhân viên"}
+                        </Text>
+                      </LinearGradient> */}
           </View>
         </View>
 
@@ -122,39 +126,39 @@ export default function ProfileScreen({ navigation }: any) {
         <View style={styles.menuContainer}>
           <Text style={styles.menuHeader}>TÀI KHOẢN</Text>
 
-          <TouchableOpacity
-            style={styles.menuItem}
-            activeOpacity={0.6}
-            onPress={() => navigation.navigate("ProfileDetail")}
-          >
-            <View style={styles.menuItemLeft}>
-              <View style={[styles.iconContainer, { backgroundColor: "#e0e7ff" }]}>
-                <EvilIcons name="user" size={24} color="#4f46e5" />
-              </View>
-              <View style={styles.menuItemContent}>
-                <Text style={styles.menuItemTitle}>Thông tin cá nhân</Text>
-                <Text style={styles.menuItemSubtitle}>Xem và chỉnh sửa thông tin</Text>
-              </View>
-            </View>
-            <EvilIcons name="chevron-right" size={28} color="#cbd5e1" />
-          </TouchableOpacity>
+          {/* <TouchableOpacity
+                      style={styles.menuItem}
+                      activeOpacity={0.6}
+                      onPress={() => navigation.navigate("ProfileDetail")}
+                    >
+                      <View style={styles.menuItemLeft}>
+                        <View style={[styles.iconContainer, { backgroundColor: "#e0e7ff" }]}>
+                          <EvilIcons name="user" size={isTablet ? 24 : 20} color="#4f46e5" />
+                        </View>
+                        <View style={styles.menuItemContent}>
+                          <Text style={styles.menuItemTitle}>Thông tin cá nhân</Text>
+                          <Text style={styles.menuItemSubtitle}>Xem và chỉnh sửa thông tin</Text>
+                        </View>
+                      </View>
+                      <EvilIcons name="chevron-right" size={isTablet ? 28 : 24} color="#cbd5e1" />
+                    </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.menuItem}
-            activeOpacity={0.6}
-            onPress={() => navigation.navigate("ChangePassword")}
-          >
-            <View style={styles.menuItemLeft}>
-              <View style={[styles.iconContainer, { backgroundColor: "#f3e8ff" }]}>
-                <EvilIcons name="lock" size={24} color="#9333ea" />
-              </View>
-              <View style={styles.menuItemContent}>
-                <Text style={styles.menuItemTitle}>Bảo mật</Text>
-                <Text style={styles.menuItemSubtitle}>Đổi mật khẩu đăng nhập</Text>
-              </View>
-            </View>
-            <EvilIcons name="chevron-right" size={28} color="#cbd5e1" />
-          </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.menuItem}
+                      activeOpacity={0.6}
+                      onPress={() => navigation.navigate("ChangePassword")}
+                    >
+                      <View style={styles.menuItemLeft}>
+                        <View style={[styles.iconContainer, { backgroundColor: "#f3e8ff" }]}>
+                          <EvilIcons name="lock" size={isTablet ? 24 : 20} color="#9333ea" />
+                        </View>
+                        <View style={styles.menuItemContent}>
+                          <Text style={styles.menuItemTitle}>Bảo mật</Text>
+                          <Text style={styles.menuItemSubtitle}>Đổi mật khẩu đăng nhập</Text>
+                        </View>
+                      </View>
+                      <EvilIcons name="chevron-right" size={isTablet ? 28 : 24} color="#cbd5e1" />
+                    </TouchableOpacity> */}
 
           <TouchableOpacity
             style={[styles.menuItem, styles.menuItemLast]}
@@ -163,14 +167,14 @@ export default function ProfileScreen({ navigation }: any) {
           >
             <View style={styles.menuItemLeft}>
               <View style={[styles.iconContainer, { backgroundColor: "#fef3c7" }]}>
-                <EvilIcons name="question" size={24} color="#d97706" />
+                <EvilIcons name="question" size={isTablet ? 24 : 20} color="#d97706" />
               </View>
               <View style={styles.menuItemContent}>
                 <Text style={styles.menuItemTitle}>Hỗ trợ</Text>
                 <Text style={styles.menuItemSubtitle}>Hướng dẫn sử dụng ứng dụng</Text>
               </View>
             </View>
-            <EvilIcons name="chevron-right" size={28} color="#cbd5e1" />
+            <EvilIcons name="chevron-right" size={isTablet ? 28 : 24} color="#cbd5e1" />
           </TouchableOpacity>
         </View>
 
@@ -180,18 +184,12 @@ export default function ProfileScreen({ navigation }: any) {
           activeOpacity={0.8}
           onPress={handleLogout}
         >
-          <LinearGradient
-            colors={["#ef4444", "#dc2626"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.logoutGradient}
-          >
             <Text style={styles.logoutText}>Đăng xuất tài khoản</Text>
-          </LinearGradient>
+        
         </TouchableOpacity>
 
         {/* VERSION INFO */}
-        <Text style={styles.versionText}>Phiên bản 2.0.3.1</Text>
+        <Text style={styles.versionText}>Phiên bản 1.1.4</Text>
       </ScrollView>
     </SafeAreaView>
   );
@@ -209,7 +207,8 @@ const styles = StyleSheet.create({
 
   scrollContent: {
     flexGrow: 1,
-    paddingBottom: 40,
+    paddingBottom: 30,
+    alignItems: isTablet ? "center" : "stretch",
   },
 
   // Background decoration
@@ -218,101 +217,103 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    height: 300,
+    height: 240,
     overflow: "hidden",
   },
 
   circle1: {
     position: "absolute",
-    top: -50,
-    right: -30,
-    width: 200,
-    height: 200,
-    borderRadius: 100,
+    top: -40,
+    right: -25,
+    width: 150,
+    height: 150,
+    borderRadius: 75,
     backgroundColor: "rgba(102, 126, 234, 0.1)",
   },
 
   circle2: {
     position: "absolute",
-    top: 50,
-    left: -40,
-    width: 150,
-    height: 150,
-    borderRadius: 75,
+    top: 40,
+    left: -30,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
     backgroundColor: "rgba(118, 75, 162, 0.08)",
   },
 
   circle3: {
     position: "absolute",
-    bottom: 20,
-    right: 30,
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    bottom: 15,
+    right: 25,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     backgroundColor: "rgba(240, 147, 251, 0.06)",
   },
 
   // Profile Card
   profileCard: {
     backgroundColor: "#ffffff",
-    marginHorizontal: 20,
-    marginTop: 20,
-    borderRadius: 24,
-    padding: 24,
+    marginHorizontal: isTablet ? width * 0.15 : 16,
+    marginTop: 16,
+    borderRadius: 20,
+    padding: isTablet ? 30 : 20,
+    width: isTablet ? width * 0.7 : undefined,
+    maxWidth: isTablet ? 500 : undefined,
     shadowColor: "#667eea",
     shadowOffset: {
       width: 0,
-      height: 8,
+      height: 6,
     },
-    shadowOpacity: 0.12,
-    shadowRadius: 24,
-    elevation: 12,
+    shadowOpacity: 0.1,
+    shadowRadius: 20,
+    elevation: 10,
     borderWidth: 1,
     borderColor: "rgba(255, 255, 255, 0.5)",
   },
 
   avatarContainer: {
     alignItems: "center",
-    marginBottom: 20,
+    marginBottom: isTablet ? 20 : 16,
   },
 
   avatarGradient: {
-    width: 110,
-    height: 110,
-    borderRadius: 55,
-    padding: 3,
+    width: isTablet ? 110 : 90,
+    height: isTablet ? 110 : 90,
+    borderRadius: isTablet ? 55 : 45,
+    padding: 2.5,
     justifyContent: "center",
     alignItems: "center",
     shadowColor: "#667eea",
     shadowOffset: {
       width: 0,
-      height: 4,
+      height: 3,
     },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 6,
   },
 
   avatarImage: {
     width: "100%",
     height: "100%",
-    borderRadius: 55,
-    borderWidth: 3,
+    borderRadius: isTablet ? 55 : 45,
+    borderWidth: 2.5,
     borderColor: "#ffffff",
   },
 
   avatarPlaceholder: {
     width: "100%",
     height: "100%",
-    borderRadius: 55,
+    borderRadius: isTablet ? 55 : 45,
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 3,
+    borderWidth: 2.5,
     borderColor: "#ffffff",
   },
 
   avatarInitial: {
-    fontSize: 42,
+    fontSize: isTablet ? 42 : 34,
     fontWeight: "800",
     color: "#ffffff",
     textShadowColor: "rgba(0, 0, 0, 0.1)",
@@ -325,86 +326,91 @@ const styles = StyleSheet.create({
   },
 
   userName: {
-    fontSize: 24,
+    fontSize: isTablet ? 24 : 20,
     fontWeight: "700",
     color: "#1e293b",
-    marginBottom: 8,
+    marginBottom: 6,
     letterSpacing: -0.3,
   },
 
   emailContainer: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 16,
+    marginBottom: 12,
     backgroundColor: "#f1f5f9",
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 20,
+    borderRadius: 16,
   },
 
   userEmail: {
-    fontSize: 13,
+    fontSize: isTablet ? 13 : 11,
     color: "#64748b",
     marginLeft: 6,
     fontWeight: "500",
   },
 
   roleContainer: {
-    paddingHorizontal: 18,
-    paddingVertical: 8,
-    borderRadius: 24,
+    paddingHorizontal: isTablet ? 20 : 16,
+    paddingVertical: isTablet ? 10 : 8,
+    borderRadius: 20,
+    minWidth: isTablet ? 200 : 140,
+    alignSelf: "center",
     shadowColor: "#667eea",
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: 1.5,
     },
     shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 4,
+    shadowRadius: 3,
+    elevation: 3,
   },
 
   roleLabel: {
     color: "#ffffff",
-    fontSize: 13,
+    fontSize: isTablet ? 14 : 12,
     fontWeight: "600",
     letterSpacing: 0.5,
+    textAlign: "center",
   },
 
   // Menu Section
   menuContainer: {
     backgroundColor: "#ffffff",
-    marginHorizontal: 20,
-    marginTop: 24,
-    borderRadius: 20,
-    padding: 8,
+    marginHorizontal: isTablet ? width * 0.15 : 16,
+    marginTop: 20,
+    borderRadius: 16,
+    padding: 6,
+    width: isTablet ? width * 0.7 : undefined,
+    maxWidth: isTablet ? 500 : undefined,
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: 1.5,
     },
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    elevation: 4,
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 3,
     borderWidth: 1,
     borderColor: "#f1f5f9",
   },
 
   menuHeader: {
-    fontSize: 12,
+    fontSize: isTablet ? 13 : 11,
     fontWeight: "700",
     color: "#94a3b8",
-    letterSpacing: 1.2,
-    marginLeft: 16,
-    marginTop: 12,
-    marginBottom: 8,
+    letterSpacing: 1,
+    marginLeft: 14,
+    marginTop: 10,
+    marginBottom: 6,
   },
 
   menuItem: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingVertical: 14,
-    paddingHorizontal: 16,
+    paddingVertical: isTablet ? 16 : 12,
+    paddingHorizontal: 14,
     borderBottomWidth: 1,
     borderBottomColor: "#f1f5f9",
   },
@@ -420,12 +426,12 @@ const styles = StyleSheet.create({
   },
 
   iconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 16,
+    width: isTablet ? 48 : 42,
+    height: isTablet ? 48 : 42,
+    borderRadius: 14,
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 14,
+    marginRight: 12,
   },
 
   menuItemContent: {
@@ -433,40 +439,47 @@ const styles = StyleSheet.create({
   },
 
   menuItemTitle: {
-    fontSize: 16,
+    fontSize: isTablet ? 16 : 14,
     fontWeight: "600",
     color: "#1e293b",
     marginBottom: 2,
   },
 
   menuItemSubtitle: {
-    fontSize: 12,
+    fontSize: isTablet ? 13 : 11,
     color: "#94a3b8",
     fontWeight: "500",
   },
 
   // Logout Button
   logoutButton: {
-    marginHorizontal: 20,
-    marginTop: 24,
-    borderRadius: 16,
-    overflow: "hidden",
+    marginHorizontal: isTablet ? width * 0.15 : 16,
+    marginTop: 20,
+    borderRadius: 12,
+    width: isTablet ? width * 0.7 : undefined,
+    maxWidth: isTablet ? 500 : undefined,
     shadowColor: "#ef4444",
     shadowOffset: {
       width: 0,
-      height: 4,
+      height: 3,
     },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 6,
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 4,
+      height: 48,
+          justifyContent: "center",
+          alignItems: "center",
+    backgroundColor: "#dc2626",
   },
 
   logoutGradient: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 16,
-    paddingHorizontal: 24,
+    paddingVertical: isTablet ? 18 : 16,
+    paddingHorizontal: isTablet ? 30 : 24,
+    borderRadius: 12,
+    minHeight: isTablet ? 56 : 48,
   },
 
   logoutIcon: {
@@ -475,17 +488,19 @@ const styles = StyleSheet.create({
 
   logoutText: {
     color: "#ffffff",
-    fontSize: 16,
-    fontWeight: "600",
-    letterSpacing: 0.3,
+    fontSize: isTablet ? 18 : 16,
+    fontWeight: "700",
+    letterSpacing: 0.5,
+    textAlign: "center",
+    flexShrink: 0,
   },
 
   // Version
   versionText: {
     textAlign: "center",
-    fontSize: 11,
+    fontSize: isTablet ? 12 : 10,
     color: "#cbd5e1",
-    marginTop: 20,
+    marginTop: 16,
     fontWeight: "500",
   },
 });

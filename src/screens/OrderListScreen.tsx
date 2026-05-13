@@ -44,6 +44,7 @@ import { EmptyState } from "../components/EmptyComponent";
 import { usersService } from "../services/user.service";
 import AppNotification from "../components/AppNotification";
 import { connectSocket, disconnectSocket } from "../services/socket.service";
+import { LinearGradient } from "expo-linear-gradient";
 
 export default function OrderListScreen({ navigation, route }: any) {
   const PAGE_SIZE = 10;
@@ -99,13 +100,54 @@ export default function OrderListScreen({ navigation, route }: any) {
     message: "",
   });
 
+  const filterRef = useRef({
+    search: '',
+    deptFilter: '',
+    filter: 'ALL',
+    dateFilter: null as string | null,
+    timeFilter: '',
+    statusFilter: [] as string[],
+    orderTypeFilter: ''
+  });
+
+  useEffect(() => {
+    filterRef.current = {
+      search,
+      deptFilter,
+      filter,
+      dateFilter,
+      timeFilter,
+      statusFilter,
+      orderTypeFilter,
+    };
+  }, [
+    search,
+    deptFilter,
+    filter,
+    dateFilter,
+    timeFilter,
+    statusFilter,
+    orderTypeFilter,
+  ]);
+
   useEffect(() => {
     if (!user) return;
 
     connectSocket(user.id, user.role, {
       dashboardUpdate: () => {
         console.log("📡 dashboardUpdate");
-        fetchOrders(1);
+        const currentFilter = filterRef.current;
+        fetchOrders(
+          1,
+          false,
+          currentFilter.search,
+          currentFilter.deptFilter,
+          currentFilter.filter,
+          currentFilter.dateFilter,
+          currentFilter.timeFilter,
+          currentFilter.statusFilter,
+          currentFilter.orderTypeFilter,
+        );
       },
     });
   }, [user]);
@@ -263,7 +305,7 @@ export default function OrderListScreen({ navigation, route }: any) {
   }));
 
   const activeFilterCount = [
-    dateFilter,
+    // dateFilter,
     deptFilter,
     timeFilter,
     orderTypeFilter,
@@ -372,7 +414,7 @@ export default function OrderListScreen({ navigation, route }: any) {
   const tabs = React.useMemo(() => {
     const baseTabs = [
       { key: "ALL", label: "Tất cả" },
-      { key: "TODAY", label: "Giao hôm nay" },
+      { key: "TODAY", label: "Giao nhận hôm nay" },
       { key: "PENDING_GROUP", label: "Cần xử lý" },
       { key: "DONE_GROUP", label: "Hoàn tất" },
     ];
@@ -827,7 +869,7 @@ export default function OrderListScreen({ navigation, route }: any) {
         style={[
           styles.card,
           { borderLeftColor: getStatusBorderColor(item.status) },
-          isSelected(item) && { borderWidth: 2, borderColor: "#2563eb" },
+          isSelected(item) && { borderWidth: 1.5, borderColor: "#2563eb" },
           highlight && {
             backgroundColor: highlight.backgroundColor,
             borderColor: highlight.borderColor,
@@ -845,7 +887,7 @@ export default function OrderListScreen({ navigation, route }: any) {
           >
             <Ionicons
               name={isSelected(item) ? "checkbox" : "square-outline"}
-              size={26}
+              size={20}
               color={
                 ["PENDING", "REJECTED"].includes(item.status)
                   ? "#2563eb"
@@ -863,7 +905,7 @@ export default function OrderListScreen({ navigation, route }: any) {
         <View style={styles.cardHeader}>
           <View style={{ flex: 1 }}>
             <Text
-              style={[styles.orderCode, isQL && { marginLeft: 35 }]}
+              style={[styles.orderCode, isQL && { marginLeft: 28 }]}
               numberOfLines={1}
               ellipsizeMode="tail"
             >
@@ -874,7 +916,7 @@ export default function OrderListScreen({ navigation, route }: any) {
               style={[
                 styles.department,
                 getDeptTextColor(item.department?.code),
-                isQL && { marginTop: 10 },
+                isQL && { marginTop: 6 },
               ]}
             >
               {item.department?.name || "Không rõ bộ phận"}
@@ -915,7 +957,7 @@ export default function OrderListScreen({ navigation, route }: any) {
             },
           ]}
         >
-          <Ionicons name="time-outline" size={16} color={deliveryStyle.icon} />
+          <Ionicons name="time-outline" size={12} color={deliveryStyle.icon} />
 
           <Text style={[styles.deliveryText, { color: deliveryStyle.text }]}>
             {item.time || "Chưa có giờ"} •
@@ -933,14 +975,14 @@ export default function OrderListScreen({ navigation, route }: any) {
 
         {/* ADDRESS */}
         <View style={styles.row}>
-          <Ionicons name="location-outline" size={16} color="#6b7280" />
+          <Ionicons name="location-outline" size={12} color="#6b7280" />
           <Text style={styles.address} numberOfLines={2}>
             {item.address || "Không có địa chỉ"}
           </Text>
         </View>
 
         <View style={styles.rowContact}>
-          <Ionicons name="person-outline" size={16} color="#6b7280" />
+          <Ionicons name="person-outline" size={12} color="#6b7280" />
           <Text style={styles.address} numberOfLines={2}>
             {item.contact || "Không có người liên hệ"}{" "}
             {item.phone ? ` - ${item.phone}` : ""}
@@ -950,7 +992,7 @@ export default function OrderListScreen({ navigation, route }: any) {
         {/* FOOTER */}
         <View style={styles.cardFooter}>
           <View style={styles.contactBox}>
-            <Ionicons name="bicycle-outline" size={14} color="#9ca3af" />
+            <Ionicons name="bicycle-outline" size={11} color="#9ca3af" />
 
             <Text style={styles.receiverName} numberOfLines={2}>
               {item.receiverName || "Chưa phân công"}
@@ -969,7 +1011,7 @@ export default function OrderListScreen({ navigation, route }: any) {
     <SafeAreaView style={styles.container} edges={["left", "right"]}>
       <View style={styles.searchRow}>
         <View style={styles.searchBox}>
-          <Ionicons name="search" size={18} color="#6b7280" />
+          <Ionicons name="search" size={14} color="#6b7280" />
 
           <TextInput
             placeholder="Tìm mã đơn, khách hàng..."
@@ -986,16 +1028,27 @@ export default function OrderListScreen({ navigation, route }: any) {
         >
           <Ionicons
             name="refresh"
-            size={18}
+            size={14}
             color={loading ? "#ff0000" : "#ff4848"}
           />
         </TouchableOpacity>
+
+        {/* Ngày */}
+        <View style={styles.btnDateFilter}>
+          <TouchableOpacity
+            style={styles.filterItem3Icon}
+            onPress={() => setShowDatePicker(true)}
+          >
+            <Ionicons name="calendar-outline" size={14} color="#2563eb" />
+            {dateFilter && <View style={styles.dot} />}
+          </TouchableOpacity>
+        </View>
 
         <TouchableOpacity
           style={styles.filterButton}
           onPress={() => setShowFilters((prev) => !prev)}
         >
-          <Ionicons name="filter-outline" size={20} color="#2563eb" />
+          <Ionicons name="filter-outline" size={16} color="#2563eb" />
 
           {activeFilterCount > 0 && (
             <View style={styles.filterBadge}>
@@ -1010,7 +1063,7 @@ export default function OrderListScreen({ navigation, route }: any) {
           {/* ROW 1 */}
           <View style={styles.filterRowSearch}>
             {/* Buổi */}
-            <View style={styles.filterGroupTime}>
+            <View style={styles.filterGroup2}>
               <Text style={styles.filterLabel}>Buổi</Text>
               <View style={styles.filterItem3}>
                 <Dropdown
@@ -1029,7 +1082,7 @@ export default function OrderListScreen({ navigation, route }: any) {
             </View>
 
             {/* Loại */}
-            <View style={styles.filterGroup3}>
+            <View style={styles.filterGroup2}>
               <Text style={styles.filterLabel}>Loại yêu cầu</Text>
               <View style={styles.filterItem3}>
                 <Dropdown
@@ -1045,18 +1098,6 @@ export default function OrderListScreen({ navigation, route }: any) {
                   onChange={(item) => setOrderTypeFilter(item.value)}
                 />
               </View>
-            </View>
-
-            {/* Ngày */}
-            <View style={styles.filterGroupIcon}>
-              <Text style={styles.filterLabel}>Ngày giao</Text>
-              <TouchableOpacity
-                style={styles.filterItem3Icon}
-                onPress={() => setShowDatePicker(true)}
-              >
-                <Ionicons name="calendar-outline" size={18} color="#2563eb" />
-                {dateFilter && <View style={styles.dot} />}
-              </TouchableOpacity>
             </View>
           </View>
 
@@ -1118,7 +1159,7 @@ export default function OrderListScreen({ navigation, route }: any) {
           <Text style={styles.searchStatusText}>
             Tìm kiếm:
             {search ? ` "${search}"` : ""}
-            {dateFilter ? ` • ${formatDate(dateFilter)}` : ""}
+            {dateFilter ? ` • Ngày giao nhận: ${formatDate(dateFilter)}` : ""}
             {deptFilter ? ` • ${deptLabel}` : ""}
             {timeFilter ? ` • ${timeFilterLabel}` : ""}
             {statusFilter.length > 0 ? ` • ${statusLabels}` : ""}
@@ -1134,7 +1175,7 @@ export default function OrderListScreen({ navigation, route }: any) {
 
             {/* CLOSE ICON */}
             <TouchableOpacity onPress={handleReset}>
-              <Ionicons name="close-circle" size={18} color="#ef4444" />
+              <Ionicons name="close-circle" size={14} color="#ef4444" />
             </TouchableOpacity>
           </View>
         </View>
@@ -1146,7 +1187,7 @@ export default function OrderListScreen({ navigation, route }: any) {
         contentContainerStyle={styles.tabs}
         style={{
           flexGrow: 0,
-          height: 50,
+          height: 40,
         }}
       >
         {tabs.map((tab) => {
@@ -1165,13 +1206,13 @@ export default function OrderListScreen({ navigation, route }: any) {
                 {tab.label}
               </Text>
 
-              {tab.key === "PENDING_GROUP" && pendingOrdersCount > 0 && (
+              {/* {tab.key === "PENDING_GROUP" && pendingOrdersCount > 0 && (
                 <View style={styles.badge}>
                   <Text style={styles.badgeText}>
                     {pendingOrdersCount > 99 ? "99+" : pendingOrdersCount}
                   </Text>
                 </View>
-              )}
+              )} */}
             </TouchableOpacity>
           );
         })}
@@ -1182,10 +1223,10 @@ export default function OrderListScreen({ navigation, route }: any) {
           <TouchableOpacity onPress={toggleAll} style={styles.selectAll}>
             <Ionicons
               name={isSelectAll ? "checkbox" : "square-outline"}
-              size={22}
+              size={18}
               color="#2563eb"
             />
-            <Text>
+            <Text style={styles.selectAllText}>
               {isSelectAll
                 ? `Đã chọn tất cả (${pendingCount - excludedOrders.length})`
                 : `Chọn tất cả`}
@@ -1214,7 +1255,6 @@ export default function OrderListScreen({ navigation, route }: any) {
             onDragEnd={onDragEnd}
             onEndReached={loadMore}
             onEndReachedThreshold={0.4}
-            // activationDistance={20}
             scrollEnabled={true}
             activationDistance={10}
             dragItemOverflow={true}
@@ -1292,7 +1332,7 @@ export default function OrderListScreen({ navigation, route }: any) {
         </TouchableOpacity>
       )}
 
-      <Modal visible={showAssignModal} transparent animationType="slide">
+      <Modal visible={showAssignModal} transparent animationType="fade">
         <Pressable
           style={styles.modalOverlay}
           onPress={() => setShowAssignModal(false)}
@@ -1301,27 +1341,110 @@ export default function OrderListScreen({ navigation, route }: any) {
             style={styles.modalBox}
             onPress={(e) => e.stopPropagation()}
           >
-            <Text style={styles.modalTitle}>Chọn nhân viên giao nhận</Text>
+            {/* Modal Header */}
+            <View style={styles.modalHeader}>
+              <View style={styles.modalHeaderLeft}>
+                <LinearGradient
+                  colors={["#3B82F6", "#2563EB"]}
+                  style={styles.modalHeaderIcon}
+                >
+                  <Ionicons
+                    name="swap-horizontal-outline"
+                    size={20}
+                    color="#FFFFFF"
+                  />
+                </LinearGradient>
+                <View>
+                  <Text style={styles.modalTitle}>Phân công hàng loạt</Text>
+                  <Text style={styles.selectedInfo}>
+                    Đã chọn {getSelectedCount()} đơn hàng
+                  </Text>
+                </View>
+              </View>
+              <TouchableOpacity onPress={() => setShowAssignModal(false)}>
+                <Ionicons name="close" size={22} color="#64748B" />
+              </TouchableOpacity>
+            </View>
 
-            <Text style={styles.selectedInfo}>
-              Đã chọn {getSelectedCount()} đơn
-            </Text>
+            {/* Dropdown Section */}
+            <View style={styles.modalSection}>
+              <View style={styles.sectionHeader}>
+                <Ionicons name="people-outline" size={16} color="#64748B" />
+                <Text style={styles.sectionLabel}>
+                  Chọn nhân viên giao nhận
+                </Text>
+              </View>
 
-            <Dropdown
-              style={styles.dropdownShipper}
-              containerStyle={styles.dropdownContainerShipper}
-              dropdownPosition="top"
-              maxHeight={250}
-              placeholderStyle={styles.dropdownPlaceholderShipper}
-              selectedTextStyle={styles.dropdownSelected}
-              data={shipperOptions}
-              labelField="label"
-              valueField="value"
-              placeholder="Chọn nhân viên giao nhận"
-              value={selectedShipper?.value}
-              onChange={(item) => setSelectedShipper(item)}
-            />
+              <Dropdown
+                style={styles.dropdownShipper}
+                containerStyle={styles.dropdownContainerShipper}
+                itemContainerStyle={styles.dropdownItemContainer}
+                dropdownPosition="top"
+                maxHeight={250}
+                data={shipperOptions}
+                labelField="name"
+                valueField="value"
+                placeholder="Chọn nhân viên giao nhận"
+                placeholderStyle={styles.dropdownPlaceholderShipper}
+                selectedTextStyle={styles.dropdownSelectedShipper}
+                value={selectedShipper?.value}
+                onChange={(item) => setSelectedShipper(item)}
+                renderLeftIcon={() => (
+                  <Ionicons
+                    name="person-outline"
+                    size={16}
+                    color={selectedShipper?.value ? "#3B82F6" : "#94A3B8"}
+                    style={{ marginRight: 8 }}
+                  />
+                )}
+                renderItem={(item) => (
+                  <View style={styles.itemRow}>
+                    <View style={styles.itemLeft}>
+                      <View>
+                        <Text style={styles.itemName}>{item.name}</Text>
+                      </View>
+                    </View>
+
+                    <View style={styles.itemRight}>
+                      {item.activeOrders > 0 ? (
+                        <View style={styles.busyBadge}>
+                          <View
+                            style={[
+                              styles.statusDot,
+                              { backgroundColor: "#EF4444" },
+                            ]}
+                          />
+                          <Text style={styles.busyText}>
+                            {item.activeOrders} đơn
+                          </Text>
+                        </View>
+                      ) : (
+                        <View style={styles.freeBadge}>
+                          <View
+                            style={[
+                              styles.statusDot,
+                              { backgroundColor: "#22C55E" },
+                            ]}
+                          />
+                          <Text style={styles.freeText}>Rảnh</Text>
+                        </View>
+                      )}
+                    </View>
+                  </View>
+                )}
+              />
+            </View>
+
+            {/* Modal Actions */}
             <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={styles.modalCancelBtn}
+                onPress={() => setShowAssignModal(false)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.modalCancelText}>Đóng</Text>
+              </TouchableOpacity>
+
               <TouchableOpacity
                 style={styles.applyButton}
                 onPress={confirmBulkAssign}
@@ -1371,7 +1494,7 @@ export default function OrderListScreen({ navigation, route }: any) {
                     <Text style={styles.statusLabel}>{s.label}</Text>
 
                     {checked && (
-                      <Ionicons name="checkmark" size={18} color="#2563eb" />
+                      <Ionicons name="checkmark" size={14} color="#2563eb" />
                     )}
                   </TouchableOpacity>
                 );
@@ -1412,34 +1535,27 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#f3f4f6",
-    marginTop: 15,
+    marginTop: 10,
   },
 
   searchInput: {
     flex: 1,
-    fontSize: 14,
+    fontSize: 12,
+    marginLeft: 6,
   },
-
-  // tabs: {
-  //   flexDirection: "row",
-  //   paddingHorizontal: 12,
-  //   marginBottom: 12,
-  //   gap: 10,
-  //   justifyContent: "flex-start",
-  // },
 
   tabs: {
     flexDirection: "row",
-    paddingHorizontal: 12,
-    gap: 10,
+    paddingHorizontal: 10,
+    gap: 8,
     alignItems: "center",
     flexShrink: 0,
   },
 
   tab: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 25,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 20,
     backgroundColor: "#f3f4f6",
     position: "relative",
     shadowColor: "#000",
@@ -1462,45 +1578,43 @@ const styles = StyleSheet.create({
   tabText: {
     color: "#374151",
     fontWeight: "500",
-    fontSize: 14,
+    fontSize: 12,
   },
 
   tabTextActive: {
     color: "#fff",
     fontWeight: "600",
-    fontSize: 14,
+    fontSize: 12,
   },
 
   badge: {
     position: "absolute",
-    top: -5,
-    right: -5,
+    top: -4,
+    right: -4,
     backgroundColor: "#ef4444",
-    borderRadius: 10,
-    paddingHorizontal: 5,
+    borderRadius: 8,
+    paddingHorizontal: 4,
     paddingVertical: 1,
-    minWidth: 18,
+    minWidth: 16,
     alignItems: "center",
     justifyContent: "center",
   },
 
   badgeText: {
     color: "#fff",
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: "600",
   },
 
   card: {
     backgroundColor: "white",
-    marginHorizontal: 12,
-    marginVertical: 6,
-    padding: 14,
-    borderRadius: 10,
-
-    borderLeftWidth: 4,
+    marginHorizontal: 10,
+    marginVertical: 4,
+    padding: 10,
+    borderRadius: 8,
+    borderLeftWidth: 3,
     borderWidth: 1,
     borderColor: "#e5e7eb",
-
     shadowColor: "#000",
     shadowOpacity: 0.05,
     shadowRadius: 5,
@@ -1508,10 +1622,10 @@ const styles = StyleSheet.create({
   },
 
   department: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: "700",
     textTransform: "uppercase",
-    marginTop: 2,
+    marginTop: 1,
   },
 
   dragging: {
@@ -1521,42 +1635,43 @@ const styles = StyleSheet.create({
   cardHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 6,
+    marginBottom: 4,
   },
 
   orderCode: {
     fontWeight: "700",
-    fontSize: 15,
+    fontSize: 13,
     color: "#0343c4",
   },
 
   company: {
-    fontSize: 14,
-    marginBottom: 6,
+    fontSize: 12,
+    marginBottom: 4,
     color: "#111827",
     fontWeight: "600",
   },
+
   row: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: 4,
   },
 
   rowContact: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    marginTop: 3,
+    gap: 4,
+    marginTop: 2,
   },
 
   address: {
     color: "#6b7280",
-    fontSize: 12,
+    fontSize: 11,
     flex: 1,
   },
 
   cardFooter: {
-    marginTop: 8,
+    marginTop: 6,
     flexDirection: "row",
     alignItems: "flex-start",
   },
@@ -1565,27 +1680,27 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     flex: 1,
-    gap: 4,
+    gap: 3,
   },
 
   receiverName: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "700",
     color: "#374151",
     flex: 1,
   },
 
   purpose: {
-    fontSize: 12,
+    fontSize: 11,
     color: "#ef4444",
     flex: 1,
     textAlign: "right",
   },
 
   statusBadge: {
-    minWidth: 70,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+    minWidth: 60,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
     borderRadius: 999,
     alignItems: "center",
     justifyContent: "center",
@@ -1593,7 +1708,7 @@ const styles = StyleSheet.create({
   },
 
   statusText: {
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: "700",
     textAlign: "center",
   },
@@ -1601,35 +1716,35 @@ const styles = StyleSheet.create({
   deliveryBox: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    borderRadius: 6,
+    paddingVertical: 3,
+    paddingHorizontal: 6,
+    borderRadius: 5,
     alignSelf: "flex-start",
-    marginBottom: 6,
-    gap: 6,
+    marginBottom: 4,
+    gap: 4,
     borderWidth: 1,
   },
 
   deliveryText: {
-    fontSize: 13,
+    fontSize: 11,
     fontWeight: "700",
   },
 
   footer: {
-    paddingVertical: 20,
-    paddingBottom: 60,
+    paddingVertical: 16,
+    paddingBottom: 50,
     alignItems: "center",
     justifyContent: "center",
-    gap: 6,
+    gap: 4,
   },
 
   footerText: {
-    fontSize: 13,
+    fontSize: 11,
     color: "#6b7280",
   },
 
   footerDone: {
-    fontSize: 13,
+    fontSize: 11,
     color: "#9ca3af",
     fontStyle: "italic",
   },
@@ -1641,9 +1756,9 @@ const styles = StyleSheet.create({
 
   searchRow: {
     flexDirection: "row",
-    gap: 8,
-    paddingHorizontal: 16,
-    marginBottom: 10,
+    gap: 6,
+    paddingHorizontal: 12,
+    marginBottom: 8,
   },
 
   searchBox: {
@@ -1651,47 +1766,49 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#ffffff",
-    borderRadius: 10,
-    paddingHorizontal: 10,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    height: 36,
   },
 
   dateButton: {
-    width: 44,
-    height: 44,
+    width: 36,
+    height: 36,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 10,
+    borderRadius: 8,
     backgroundColor: "#eff6ff",
   },
 
   clearDate: {
-    width: 40,
-    height: 40,
+    width: 32,
+    height: 32,
     alignItems: "center",
     justifyContent: "center",
   },
+
   emptyBox: {
     alignItems: "center",
     justifyContent: "center",
-    paddingTop: 80,
-    gap: 6,
+    paddingTop: 60,
+    gap: 4,
   },
 
   emptyTitle: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: "600",
     color: "#374151",
   },
 
   emptyText: {
-    fontSize: 13,
+    fontSize: 11,
     color: "#9ca3af",
   },
 
   deptPicker: {
     flex: 1,
-    marginLeft: 6,
-    fontSize: 13,
+    marginLeft: 4,
+    fontSize: 11,
     color: "#374151",
   },
 
@@ -1705,35 +1822,35 @@ const styles = StyleSheet.create({
 
   dropdown: {
     flex: 1,
-    marginLeft: 10,
+    marginLeft: 6,
   },
 
   dropdownContainer: {
-    borderRadius: 10,
+    borderRadius: 8,
     width: "40%",
-    marginLeft: -40,
+    marginLeft: -30,
   },
 
   dropdownPlaceholder: {
-    fontSize: 13,
+    fontSize: 11,
     color: "#9ca3af",
   },
 
   dropdownText: {
-    fontSize: 13,
+    fontSize: 11,
     color: "#374151",
     fontWeight: "500",
   },
 
   dropdownItemText: {
-    fontSize: 13,
+    fontSize: 11,
   },
 
   filterRow: {
     flexDirection: "row",
-    gap: 8,
-    paddingHorizontal: 16,
-    marginBottom: 10,
+    gap: 6,
+    paddingHorizontal: 12,
+    marginBottom: 8,
   },
 
   timeFilter: {
@@ -1741,11 +1858,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#ffffff",
-    paddingHorizontal: 12,
-    borderRadius: 10,
+    paddingHorizontal: 8,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: "#e5e7eb",
-    height: 42,
+    height: 34,
   },
 
   deptFilter: {
@@ -1753,11 +1870,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#ffffff",
-    paddingHorizontal: 12,
-    borderRadius: 10,
+    paddingHorizontal: 8,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: "#e5e7eb",
-    height: 42,
+    height: 34,
   },
 
   modalOverlay: {
@@ -1768,106 +1885,109 @@ const styles = StyleSheet.create({
 
   statusModal: {
     backgroundColor: "white",
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 20,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    padding: 16,
     maxHeight: "70%",
   },
 
   modalTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "600",
-    marginBottom: 15,
+    marginBottom: 12,
   },
 
   statusItem: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 10,
+    paddingVertical: 8,
   },
 
   statusDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    marginRight: 10,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 8,
   },
 
   statusLabel: {
     flex: 1,
-    fontSize: 15,
+    fontSize: 13,
   },
 
   applyText: {
     color: "white",
     fontWeight: "600",
+    fontSize: 13,
   },
 
   modalActions: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginTop: 15,
+    // marginTop: 12,
+    gap: 9,
   },
 
   clearButton: {
     flex: 1,
-    padding: 12,
-    borderRadius: 10,
+    padding: 10,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: "#ef4444",
-    marginRight: 10,
+    marginRight: 8,
     alignItems: "center",
   },
 
   clearText: {
     color: "#ef4444",
     fontWeight: "600",
+    fontSize: 13,
   },
 
   applyButton: {
     flex: 1,
     backgroundColor: "#2563eb",
-    padding: 12,
-    borderRadius: 10,
+    padding: 10,
+    borderRadius: 8,
     alignItems: "center",
   },
 
   orderTypeBadge: {
-    marginTop: 4,
+    marginTop: 3,
     alignSelf: "flex-start",
-    paddingHorizontal: 6,
-    paddingVertical: 2,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
     borderRadius: 999,
   },
 
   orderTypeText: {
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: "600",
   },
 
   timeFilterSmall: {
-    width: 100, // nhỏ lại
-    marginLeft: 8,
+    width: 80,
+    marginLeft: 6,
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#ffffff",
-    borderRadius: 10,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: "#e5e7eb",
-    paddingHorizontal: 8,
-    height: 42,
+    paddingHorizontal: 6,
+    height: 34,
   },
 
   searchStatus: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 14,
-    marginBottom: 6,
+    paddingHorizontal: 12,
+    marginBottom: 4,
   },
 
   searchStatusText: {
-    fontSize: 12,
+    fontSize: 11,
     color: "#6b7280",
     fontStyle: "italic",
     flex: 1,
@@ -1876,20 +1996,20 @@ const styles = StyleSheet.create({
   searchActions: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    marginLeft: 10,
+    gap: 6,
+    marginLeft: 8,
   },
 
   resetText: {
-    fontSize: 12,
+    fontSize: 11,
     color: "#ef4444",
     fontWeight: "600",
   },
 
   filterButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 10,
+    width: 36,
+    height: 36,
+    borderRadius: 8,
     backgroundColor: "#eff6ff",
     alignItems: "center",
     justifyContent: "center",
@@ -1898,27 +2018,27 @@ const styles = StyleSheet.create({
 
   filterBadge: {
     position: "absolute",
-    top: -4,
-    right: -4,
+    top: -3,
+    right: -3,
     backgroundColor: "#ef4444",
-    borderRadius: 10,
-    minWidth: 18,
-    height: 18,
+    borderRadius: 8,
+    minWidth: 14,
+    height: 14,
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 4,
+    paddingHorizontal: 3,
   },
 
   filterBadgeText: {
     color: "#fff",
-    fontSize: 10,
+    fontSize: 8,
     fontWeight: "700",
   },
 
   filterContainer: {
-    paddingHorizontal: 16,
-    marginBottom: 12,
-    gap: 10,
+    paddingHorizontal: 12,
+    marginBottom: 8,
+    gap: 8,
   },
 
   filterRowSearch: {
@@ -1928,36 +2048,36 @@ const styles = StyleSheet.create({
 
   filterItem3: {
     width: "100%",
-    height: 44,
+    height: 36,
     backgroundColor: "#fff",
-    borderRadius: 10,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: "#e5e7eb",
     justifyContent: "center",
-    paddingHorizontal: 10,
+    paddingHorizontal: 8,
   },
 
   filterItem2: {
     width: "100%",
-    height: 44,
+    height: 36,
     backgroundColor: "#fff",
-    borderRadius: 10,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: "#e5e7eb",
     justifyContent: "center",
-    paddingHorizontal: 10,
+    paddingHorizontal: 8,
   },
 
   filterText: {
-    fontSize: 13,
+    fontSize: 11,
     color: "#374151",
   },
 
   filterItem3Icon: {
     width: "100%",
-    height: 40,
+    height: 34,
     backgroundColor: "#fff",
-    borderRadius: 10,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: "#e5e7eb",
     alignItems: "center",
@@ -1967,18 +2087,18 @@ const styles = StyleSheet.create({
 
   dot: {
     position: "absolute",
-    top: 6,
-    right: 6,
-    width: 6,
-    height: 6,
+    top: 4,
+    right: 4,
+    width: 5,
+    height: 5,
     borderRadius: 3,
     backgroundColor: "#ef4444",
   },
 
   filterLabel: {
-    fontSize: 12,
+    fontSize: 10,
     color: "#6b7280",
-    marginBottom: 4,
+    marginBottom: 3,
   },
 
   filterGroup3: {
@@ -2003,11 +2123,10 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     backgroundColor: "#dc2626",
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderBottomRightRadius: 8,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    borderBottomRightRadius: 6,
     zIndex: 10,
-
     shadowColor: "#dc2626",
     shadowOpacity: 0.4,
     shadowRadius: 4,
@@ -2016,46 +2135,48 @@ const styles = StyleSheet.create({
 
   priorityText: {
     color: "#fff",
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: "700",
   },
 
   checkbox: {
     position: "absolute",
-    top: 10,
-    left: 10,
+    top: 8,
+    left: 8,
     zIndex: 10,
-    width: 36,
-    height: 36,
-    borderRadius: 8,
+    width: 28,
+    height: 28,
+    borderRadius: 6,
     alignItems: "center",
     justifyContent: "center",
   },
 
   assignButton: {
     position: "absolute",
-    bottom: 20,
-    right: 20,
+    bottom: 16,
+    right: 16,
     backgroundColor: "#2563eb",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 10,
     shadowColor: "#000",
     shadowOpacity: 0.2,
     shadowOffset: { width: 0, height: 2 },
   },
+
   assignText: {
     color: "white",
     fontWeight: "bold",
+    fontSize: 13,
   },
 
   modalBox: {
     width: "100%",
     maxHeight: "70%",
     backgroundColor: "#fff",
-    borderRadius: 16,
-    paddingBottom: 50,
-    padding: 16,
+    borderRadius: 14,
+    paddingBottom: 40,
+    padding: 14,
     shadowColor: "#000",
     shadowOpacity: 0.2,
     shadowOffset: { width: 0, height: 4 },
@@ -2064,8 +2185,8 @@ const styles = StyleSheet.create({
   },
 
   shipperItem: {
-    paddingVertical: 12,
-    paddingHorizontal: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
     borderBottomWidth: 1,
     borderBottomColor: "#f1f5f9",
     flexDirection: "row",
@@ -2074,62 +2195,67 @@ const styles = StyleSheet.create({
   },
 
   dropdownShipper: {
-    height: 48,
+    height: 40,
     borderWidth: 1,
     borderColor: "#e5e7eb",
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    marginTop: 6,
-    marginBottom: 12,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    marginTop: 4,
+    marginBottom: 10,
     backgroundColor: "white",
   },
 
   dropdownContainerShipper: {
-    // borderRadius: 10,
-    borderRadius: 10,
+    borderRadius: 8,
     elevation: 10,
     zIndex: 9999,
   },
 
   dropdownPlaceholderShipper: {
     color: "#9ca3af",
-    fontSize: 14,
+    fontSize: 12,
   },
 
   dropdownSelected: {
     color: "#111827",
     fontWeight: "500",
-    fontSize: 14,
+    fontSize: 12,
   },
 
   selectAll: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     backgroundColor: "#f8fafc",
     borderBottomWidth: 1,
     borderBottomColor: "#e5e7eb",
   },
 
   selectAllWrapper: {
-    paddingHorizontal: 16,
-    paddingTop: 10,
-    paddingBottom: 6,
+    paddingHorizontal: 12,
+    paddingTop: 8,
+    paddingBottom: 4,
     backgroundColor: "#f8fafc",
   },
 
+  selectAllText: {
+    fontSize: 12,
+    color: "#374151",
+    fontWeight: "500",
+  },
+
   selectedInfo: {
-    marginTop: 6,
-    marginBottom: 10,
-    fontSize: 13,
+    marginTop: 4,
+    marginBottom: 8,
+    fontSize: 11,
     color: "#6b7280",
   },
 
   selectAllSubtitle: {
-    marginTop: 4,
-    fontSize: 12,
+    marginTop: 2,
+    fontSize: 10,
     color: "#6b7280",
   },
 
@@ -2138,14 +2264,271 @@ const styles = StyleSheet.create({
   },
 
   reloadBtn: {
-    marginLeft: 6,
+    marginLeft: 4,
     padding: 4,
-    width: 44,
-    height: 44,
-    borderRadius: 10,
+    width: 36,
+    height: 36,
+    borderRadius: 8,
     backgroundColor: "#ffcccc",
     alignItems: "center",
     justifyContent: "center",
     position: "relative",
   },
+
+  btnDateFilter: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    backgroundColor: "#cce5ff",
+    alignItems: "center",
+    justifyContent: "center",
+    position: "relative",
+  },
+
+  // modalBox: {
+  //   backgroundColor: "#FFFFFF",
+  //   borderTopLeftRadius: 24,
+  //   borderTopRightRadius: 24,
+  //   padding: 20,
+  //   maxHeight: "80%",
+  //   shadowColor: "#000",
+  //   shadowOffset: { width: 0, height: -10 },
+  //   shadowOpacity: 0.15,
+  //   shadowRadius: 30,
+  //   elevation: 20,
+  // },
+
+  // Modal Header
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 20,
+  },
+
+  modalHeaderLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    flex: 1,
+    marginRight: 12,
+  },
+
+  modalHeaderIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#3B82F6",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+
+  // modalTitle: {
+  //   fontSize: 18,
+  //   fontWeight: "700",
+  //   color: "#1E293B",
+  //   marginBottom: 4,
+  // },
+
+  // selectedInfo: {
+  //   fontSize: 13,
+  //   color: "#3B82F6",
+  //   fontWeight: "600",
+  // },
+
+  // Modal Section
+  modalSection: {
+    marginBottom: 20,
+  },
+
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 10,
+  },
+
+  sectionLabel: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#64748B",
+  },
+
+  // Dropdown Shipper
+  // dropdownShipper: {
+  //   borderWidth: 1,
+  //   borderColor: "#E2E8F0",
+  //   borderRadius: 10,
+  //   paddingHorizontal: 12,
+  //   height: 46,
+  //   backgroundColor: "#F8FAFC",
+  // },
+
+  // dropdownContainerShipper: {
+  //   borderRadius: 12,
+  //   borderWidth: 1,
+  //   borderColor: "#E2E8F0",
+  //   marginTop: 4,
+  //   shadowColor: "#000",
+  //   shadowOffset: { width: 0, height: 4 },
+  //   shadowOpacity: 0.1,
+  //   shadowRadius: 12,
+  //   elevation: 8,
+  // },
+
+  dropdownItemContainer: {
+    borderRadius: 8,
+  },
+
+  // dropdownPlaceholderShipper: {
+  //   fontSize: 13,
+  //   color: "#94A3B8",
+  // },
+
+  dropdownSelectedShipper: {
+    fontSize: 13,
+    color: "#1E293B",
+    fontWeight: "500",
+  },
+
+  // Dropdown Item (đồng bộ với ReassignOrderScreen)
+  itemRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+  },
+
+  itemLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    flex: 1,
+  },
+
+  itemAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  itemAvatarText: {
+    fontSize: 14,
+    fontWeight: "700",
+  },
+
+  itemName: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#1E293B",
+    marginBottom: 2,
+  },
+
+  itemStatus: {
+    fontSize: 11,
+    color: "#94A3B8",
+  },
+
+  itemRight: {
+    alignItems: "flex-end",
+  },
+
+  busyBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FEF2F2",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    gap: 4,
+  },
+
+  freeBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F0FDF4",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    gap: 4,
+  },
+
+  // statusDot: {
+  //   width: 6,
+  //   height: 6,
+  //   borderRadius: 3,
+  // },
+
+  busyText: {
+    fontSize: 11,
+    color: "#EF4444",
+    fontWeight: "600",
+  },
+
+  freeText: {
+    fontSize: 11,
+    color: "#22C55E",
+    fontWeight: "600",
+  },
+
+  // Modal Actions
+  // modalActions: {
+  //   flexDirection: "row",
+  //   gap: 10,
+  // },
+
+  modalCancelBtn: {
+    flex: 1,
+    // height: 46,
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: 12,
+    backgroundColor: "#F1F5F9",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+  },
+
+  modalCancelText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#64748B",
+  },
+
+  // applyButton: {
+  //   flex: 2,
+  //   borderRadius: 12,
+  //   overflow: "hidden",
+  //   shadowColor: "#3B82F6",
+  //   shadowOffset: { width: 0, height: 3 },
+  //   shadowOpacity: 0.3,
+  //   shadowRadius: 6,
+  //   elevation: 4,
+  // },
+
+  applyButtonDisabled: {
+    opacity: 0.6,
+    shadowColor: "#94A3B8",
+  },
+
+  applyGradient: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 14,
+    gap: 6,
+  },
+
+  // applyText: {
+  //   color: "#FFFFFF",
+  //   fontSize: 15,
+  //   fontWeight: "700",
+  //   letterSpacing: 0.3,
+  // },
 });
