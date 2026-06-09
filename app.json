@@ -14,7 +14,12 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.nhigia.logistics",
+      "googleServicesFile": "./GoogleService-Info.plist",
       "infoPlist": {
+        "NSCameraUsageDescription": "App cần truy cập camera để chụp hình chứng từ giao hàng",
+        "NSPhotoLibraryUsageDescription": "App cần truy cập thư viện ảnh để chọn chứng từ",
+        "NSPhotoLibraryAddUsageDescription": "App cần lưu ảnh khi xử lý chứng từ",
+        
         "NSLocationAlwaysAndWhenInUseUsageDescription": "App cần vị trí để theo dõi đơn hàng ngay cả khi app đang chạy nền",
         "NSLocationWhenInUseUsageDescription": "App cần vị trí để theo dõi đơn hàng",
         "NSLocationAlwaysUsageDescription": "App cần truy cập vị trí liên tục để cập nhật trạng thái giao hàng"
@@ -27,19 +32,16 @@
         "backgroundColor": "#E6F4FE"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.nhigia.logistics",
-      "permissions": [
-        "ACCESS_FINE_LOCATION",
-        "ACCESS_COARSE_LOCATION",
-        "ACCESS_BACKGROUND_LOCATION",
-        "FOREGROUND_SERVICE",
-        "FOREGROUND_SERVICE_LOCATION"
-      ]
+      "package": "com.nhigia.logistics"
     },
     "web": {
       "favicon": "./assets/images/logo/favicon.png"
     },
-    "plugins": ["expo-sharing"],
+    "plugins": [
+      "expo-sharing",
+      "@react-native-firebase/app",
+      "@react-native-firebase/messaging"
+    ],
     "extra": {
       "eas": {
         "projectId": "f13b2926-a536-4ed1-bbe5-ee852733647e"

@@ -16,21 +16,51 @@ export const NotificationProvider = ({ children }: any) => {
   const notifications = useNotifications();
   const { reloadOrderCounts, setPendingOrdersCount } = useOrderContext();
   const { user, token } = useAuth();
-  
+
   const isUpdatingBadge = useRef(false);
   const lastKnownUnreadCount = useRef(0);
   const isInitialized = useRef(false);
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", async (state) => {
+      if (state === "active" && user) {
+        console.log("📱 App active -> reload notifications");
+
+        try {
+          await notifications.reload();
+
+          // sync badge native
+          const latestCount = notifications.unreadCount || 0;
+
+          await Notifications.setBadgeCountAsync(latestCount);
+
+          lastKnownUnreadCount.current = latestCount;
+        } catch (err) {
+          console.log(err);
+        }
+      }
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [user, notifications.unreadCount]);
 
   // Cập nhật badge khi unreadCount thay đổi
   useEffect(() => {
     const updateBadge = async () => {
       if (isUpdatingBadge.current) return;
-      
+
       try {
         isUpdatingBadge.current = true;
         const count = notifications?.unreadCount;
-        
-        if (count !== undefined && count !== null && count >= 0 && count !== lastKnownUnreadCount.current) {
+
+        if (
+          count !== undefined &&
+          count !== null &&
+          count >= 0 &&
+          count !== lastKnownUnreadCount.current
+        ) {
           await Notifications.setBadgeCountAsync(count);
           lastKnownUnreadCount.current = count;
           console.log("🔔 Badge updated to:", count);
@@ -62,7 +92,12 @@ export const NotificationProvider = ({ children }: any) => {
             const newBadge = Math.max(0, currentBadge + 1);
             lastKnownUnreadCount.current = newBadge;
             await Notifications.setBadgeCountAsync(newBadge);
-            console.log("🔔 New notification, badge:", currentBadge, "->", newBadge);
+            console.log(
+              "🔔 New notification, badge:",
+              currentBadge,
+              "->",
+              newBadge,
+            );
           });
 
           // Nếu app đang mở -> hiện toast
@@ -113,7 +148,7 @@ export const NotificationProvider = ({ children }: any) => {
     init();
 
     return () => {
-      disconnectSocket();
+      // disconnectSocket();
       isInitialized.current = false;
     };
   }, [user]);
@@ -122,7 +157,13 @@ export const NotificationProvider = ({ children }: any) => {
   useEffect(() => {
     const sub = Notifications.addNotificationResponseReceivedListener(
       async (response) => {
-        const data = response.notification.request.content.data;
+        // const data = response.notification.request.content.data;
+        const rawData: any = response.notification.request.content.data;
+
+        const data: any = {
+          ...rawData,
+          ...(rawData?.aps || {}),
+        };
 
         try {
           if (data?.notificationId) {
@@ -157,7 +198,13 @@ export const NotificationProvider = ({ children }: any) => {
 
       if (!response) return;
 
-      const data = response.notification.request.content.data;
+      // const data = response.notification.request.content.data;
+      const rawData: any = response.notification.request.content.data;
+
+      const data: any = {
+        ...rawData,
+        ...(rawData?.aps || {}),
+      };
 
       if (data?.orderId) {
         setTimeout(() => {

@@ -46,13 +46,27 @@ export const orderService = {
     return res.data;
   },
 
+  // async createOrder(order: any) {
+  //   const res = await axiosClient.post(`/orders`, order);
+  //   return res.data;
+  // },
+
   async createOrder(order: any) {
-    const res = await axiosClient.post(`/orders`, order);
+    const res = await axiosClient.post(`/orders`, order, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+
     return res.data;
   },
 
   async updateOrder(id: number, updates: any) {
-    const res = await axiosClient.put(`/orders/${id}`, updates);
+    const res = await axiosClient.put(`/orders/${id}`, updates, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
     return res.data;
   },
 
@@ -321,11 +335,10 @@ export const orderService = {
     return res.data;
   },
 
-  async qlArchivedOrder(
-    id: number,
-    order_code: string,
-  ) {
-    const res = await axiosClient.post(`/orders/${id}/archived`, {order_code});
+  async qlArchivedOrder(id: number, order_code: string) {
+    const res = await axiosClient.post(`/orders/${id}/archived`, {
+      order_code,
+    });
 
     return res.data;
   },
@@ -375,6 +388,48 @@ export const orderService = {
       },
     );
 
+    return res.data;
+  },
+
+  async searchCompanies(keyword: string, page: number = 1) {
+    const res = await axiosClient.get(
+      `/customers/search?keyword=${encodeURIComponent(keyword)}&page=${page}`,
+    );
+    return res.data;
+  },
+
+  async searchCompaniesByPhone(phone: string, page: number = 1) {
+    const res = await axiosClient.get(
+      `/customers/search-by-phone?phone=${phone}&page=${page}`,
+    );
+    return res.data;
+  },
+
+  async searchCompaniesByContactName(keyword: string, page: number = 1) {
+    const res = await axiosClient.get(
+      `/customers/search-by-contact?keyword=${encodeURIComponent(keyword)}&page=${page}`,
+    );
+    return res.data;
+  },
+  async shipperArising(id: number, reason: string, order_code: string) {
+    const res = await axiosClient.post(`/orders/${id}/shipper-arising`, {
+      reason,
+      order_code,
+    });
+    return res.data;
+  },
+
+  async updateArising(
+    id: number,
+    contact_new?: string,
+    phone_new?: string,
+    address_new?: string,
+  ) {
+    const res = await axiosClient.put(`/orders/${id}/update-arising`, {
+      contact_new: contact_new || null,
+      phone_new: phone_new || null,
+      address_new: address_new || null,
+    });
     return res.data;
   },
 };

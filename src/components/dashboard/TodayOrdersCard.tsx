@@ -65,7 +65,15 @@ export default function TodayOrdersCard({ orders, loading }: any) {
               >
                 {/* TIME */}
                 <View style={styles.timeBox}>
-                  <Text style={styles.time}>{o.time}</Text>
+                  {o.timeSlot ? (
+                    <View style={{ alignItems: "center" }}>
+                      <Text style={styles.timeSlotText}>
+                        {o.timeSlot === "MORNING" ? "☀️ Sáng" : "⛅ Chiều"}
+                      </Text>
+                    </View>
+                  ) : (
+                    <Text style={styles.time}>{o.time}</Text>
+                  )}
                 </View>
 
                 {/* INFO */}
@@ -203,5 +211,11 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: "#f1f5f9",
     marginTop: 10,
+  },
+  timeSlotText: {
+    fontSize: 11,
+    fontWeight: "800",
+    color: "#2563eb",
+    textTransform: "uppercase",
   },
 });

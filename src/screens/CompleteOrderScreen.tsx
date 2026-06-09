@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -16,7 +16,7 @@ import * as Location from "expo-location";
 import Signature from "react-native-signature-canvas";
 
 import { orderService } from "../services/order.service";
-import { useNavigation } from "@react-navigation/native";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import * as FileSystem from "expo-file-system/legacy";
 import AppNotification from "../components/AppNotification";
 import { ActivityIndicator } from "react-native";
@@ -61,6 +61,59 @@ export default function CompleteOrderScreen({ route }: any) {
   const [finalDuration, setFinalDuration] = useState(0);
   const intervalRef = useRef<any>(null);
 
+  const submittingRef = useRef(false);
+
+  const [cachedLocation, setCachedLocation] = useState<any>(null);
+  const [isFetchingLocation, setIsFetchingLocation] = useState(false);
+
+  useEffect(() => {
+    prefetchLocation();
+  }, []);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      checkOrderStatus();
+    }, []),
+  );
+
+  const checkOrderStatus = async () => {
+    const order = await orderService.getOrderDetail(id);
+
+    if (order.status === "COMPLETED") {
+      navigation.reset({
+        index: 0,
+        routes: [{ name: "OrderList" as never }],
+      });
+    }
+  };
+
+  const prefetchLocation = async () => {
+    try {
+      setIsFetchingLocation(true);
+
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") return;
+
+      // Dùng Balanced để tiết kiệm pin và nhanh hơn
+      const location = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+        timeInterval: 10000,
+      });
+
+      setCachedLocation({
+        lat: location.coords.latitude,
+        lng: location.coords.longitude,
+        timestamp: Date.now(),
+      });
+
+      console.log("✅ Đã cache vị trí");
+    } catch (err) {
+      console.log("⚠️ Không prefetch được vị trí:", err);
+    } finally {
+      setIsFetchingLocation(false);
+    }
+  };
+
   const validateImage = async (asset: any) => {
     const info = await FileSystem.getInfoAsync(asset.uri);
 
@@ -89,7 +142,31 @@ export default function CompleteOrderScreen({ route }: any) {
     return result;
   };
 
+  // const takePhoto = async () => {
+  //   const res = await ImagePicker.launchCameraAsync({
+  //     quality: 0.7,
+  //   });
+
+  //   if (!res.canceled) {
+  //     const asset = res.assets[0];
+
+  //     if (!(await validateImage(asset))) return;
+
+  //     const compressed = await compressImage(asset.uri);
+
+  //     // setImages((prev) => [...prev, asset]);
+  //     setImages((prev) => [...prev, compressed]);
+  //   }
+  // };
+
   const takePhoto = async () => {
+    const permission = await ImagePicker.requestCameraPermissionsAsync();
+
+    if (!permission.granted) {
+      Alert.alert("Thông báo", "Bạn chưa cấp quyền camera");
+      return;
+    }
+
     const res = await ImagePicker.launchCameraAsync({
       quality: 0.7,
     });
@@ -101,12 +178,18 @@ export default function CompleteOrderScreen({ route }: any) {
 
       const compressed = await compressImage(asset.uri);
 
-      // setImages((prev) => [...prev, asset]);
       setImages((prev) => [...prev, compressed]);
     }
   };
 
   const pickImage = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+    if (!permission.granted) {
+      Alert.alert("Thông báo", "Bạn chưa cấp quyền thư viện ảnh");
+      return;
+    }
+
     const res = await ImagePicker.launchImageLibraryAsync({
       quality: 0.7,
     });
@@ -132,36 +215,36 @@ export default function CompleteOrderScreen({ route }: any) {
     // setSignature(null);
   };
 
-  const getLocation = async () => {
-    try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
+  // const getLocation = async () => {
+  //   try {
+  //     const { status } = await Location.requestForegroundPermissionsAsync();
 
-      if (status !== "granted") {
-        setNotify({
-          visible: true,
-          type: "error",
-          message: "Không có quyền định vị",
-        });
-        return null;
-      }
+  //     if (status !== "granted") {
+  //       setNotify({
+  //         visible: true,
+  //         type: "error",
+  //         message: "Không có quyền định vị",
+  //       });
+  //       return null;
+  //     }
 
-      const loc = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High,
-      });
+  //     const loc = await Location.getCurrentPositionAsync({
+  //       accuracy: Location.Accuracy.High,
+  //     });
 
-      return {
-        lat: loc.coords.latitude,
-        lng: loc.coords.longitude,
-      };
-    } catch (err) {
-      setNotify({
-        visible: true,
-        type: "error",
-        message: "Không lấy được vị trí",
-      });
-      return null;
-    }
-  };
+  //     return {
+  //       lat: loc.coords.latitude,
+  //       lng: loc.coords.longitude,
+  //     };
+  //   } catch (err) {
+  //     setNotify({
+  //       visible: true,
+  //       type: "error",
+  //       message: "Không lấy được vị trí",
+  //     });
+  //     return null;
+  //   }
+  // };
 
   // const startRecording = async () => {
   //   try {
@@ -220,6 +303,73 @@ export default function CompleteOrderScreen({ route }: any) {
   //   }
   // };
 
+  const getLocation = async () => {
+    // Nếu có cache và còn mới (< 2 phút) thì dùng luôn
+    if (cachedLocation && Date.now() - cachedLocation.timestamp < 120000) {
+      console.log(
+        "📍 Dùng vị trí cache (cách đây",
+        Math.floor((Date.now() - cachedLocation.timestamp) / 1000),
+        "giây)",
+      );
+      return {
+        lat: cachedLocation.lat,
+        lng: cachedLocation.lng,
+      };
+    }
+
+    // Nếu cache cũ hoặc không có, lấy mới
+    try {
+      console.log("📍 Cache cũ, lấy vị trí mới...");
+
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") {
+        setNotify({
+          visible: true,
+          type: "error",
+          message: "Không có quyền định vị",
+        });
+        return null;
+      }
+
+      // Timeout sau 5 giây
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("GPS timeout")), 5000),
+      );
+
+      const locationPromise = Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+        timeInterval: 5000,
+      });
+
+      const location = (await Promise.race([
+        locationPromise,
+        timeoutPromise,
+      ])) as any;
+
+      return {
+        lat: location.coords.latitude,
+        lng: location.coords.longitude,
+      };
+    } catch (err) {
+      console.log("⚠️ Lỗi GPS, dùng cache cũ:", err);
+
+      // Fallback: dùng cache cũ nếu có
+      if (cachedLocation) {
+        return {
+          lat: cachedLocation.lat,
+          lng: cachedLocation.lng,
+        };
+      }
+
+      setNotify({
+        visible: true,
+        type: "error",
+        message: "Không lấy được vị trí, vui lòng thử lại",
+      });
+      return null;
+    }
+  };
+
   const formatTime = (sec: number) => {
     const m = Math.floor(sec / 60);
     const s = sec % 60;
@@ -234,35 +384,148 @@ export default function CompleteOrderScreen({ route }: any) {
   //   }
   // };
 
-  const completeOrder = async () => {
-    if (loading) return;
+  // const completeOrder = async () => {
+  //   if (loading) return;
 
-    if (images.length === 0) {
-      setNotify({
-        visible: true,
-        type: "error",
-        message: "Cần ít nhất 1 hình ảnh chứng từ",
-      });
+  //   if (submittingRef.current) return;
+
+  //   submittingRef.current = true;
+
+  //   if (images.length === 0) {
+  //     setNotify({
+  //       visible: true,
+  //       type: "error",
+  //       message: "Cần ít nhất 1 hình ảnh chứng từ",
+  //     });
+  //     return;
+  //   }
+
+  //   // if (orderType === "PICKUP" && !signaturePreview) {
+  //   //   setNotify({
+  //   //     visible: true,
+  //   //     type: "error",
+  //   //     message: "Cần chữ ký khách hàng",
+  //   //   });
+  //   //   return;
+  //   // }
+
+  //   try {
+  //     setLoading(true);
+  //     setLoadingText("Đang lấy vị trí GPS...");
+
+  //     const location = await getLocation();
+
+  //     if (!location) {
+  //       setNotify({
+  //         visible: true,
+  //         type: "error",
+  //         message: "Không lấy được vị trí GPS, vui lòng thử lại",
+  //       });
+  //       setLoading(false);
+  //       return;
+  //     }
+
+  //     setLoadingText("Đang upload dữ liệu...");
+
+  //     let signatureFile = undefined;
+
+  //     if (signaturePreview) {
+  //       const base64 = signaturePreview.replace("data:image/png;base64,", "");
+
+  //       const fileUri = FileSystem.cacheDirectory + "signature.png";
+
+  //       await FileSystem.writeAsStringAsync(fileUri, base64, {
+  //         encoding: FileSystem.EncodingType.Base64,
+  //       });
+
+  //       signatureFile = {
+  //         uri: fileUri,
+  //         type: "image/png",
+  //         fileName: "signature.png",
+  //       };
+  //     }
+
+  //     await orderService.shipperComplete(
+  //       id,
+  //       images,
+  //       location,
+  //       signatureFile,
+  //       audioUri
+  //         ? {
+  //             uri: audioUri,
+  //             type: "audio/m4a",
+  //             name: `audio-${Date.now()}.m4a`,
+  //           }
+  //         : null,
+  //       note,
+  //       attachments,
+  //       missingNote,
+  //     );
+
+  //     // stopTracking();
+
+  //     setTimeout(() => {
+  //       setNotify({
+  //         visible: true,
+  //         type: "success",
+  //         message: "Xác nhận hoàn tất đơn hàng thành công",
+  //       });
+
+  //       // navigation.reset({
+  //       //   index: 0,
+  //       //   routes: [{ name: "OrderList" as never }],
+  //       // });
+  //     }, 300);
+
+  //     navigation.navigate("OrderList" as never);
+  //   } catch (err: any) {
+  //     setNotify({
+  //       visible: true,
+  //       type: "error",
+  //       message: "Xác nhận hoàn tất đơn hàng thất bại",
+  //     });
+  //     // console.log("error completed: ", err);
+  //     console.log("FULL ERROR:", {
+  //       message: err?.message,
+  //       code: err?.code,
+  //       response: err?.response?.data,
+  //       status: err?.response?.status,
+  //       config: err?.config,
+  //     });
+  //   } finally {
+  //     submittingRef.current = false;
+  //     setLoading(false);
+  //   }
+  // };
+
+  const completeOrder = async () => {
+    if (loading || submittingRef.current) {
       return;
     }
 
-    // if (orderType === "PICKUP" && !signaturePreview) {
-    //   setNotify({
-    //     visible: true,
-    //     type: "error",
-    //     message: "Cần chữ ký khách hàng",
-    //   });
-    //   return;
-    // }
+    submittingRef.current = true;
 
     try {
+      if (images.length === 0) {
+        setNotify({
+          visible: true,
+          type: "error",
+          message: "Cần ít nhất 1 hình ảnh chứng từ",
+        });
+        return;
+      }
+
       setLoading(true);
       setLoadingText("Đang lấy vị trí GPS...");
 
       const location = await getLocation();
 
       if (!location) {
-        setLoading(false);
+        setNotify({
+          visible: true,
+          type: "error",
+          message: "Không lấy được vị trí GPS, vui lòng thử lại",
+        });
         return;
       }
 
@@ -286,7 +549,7 @@ export default function CompleteOrderScreen({ route }: any) {
         };
       }
 
-      await orderService.shipperComplete(
+      const result = await orderService.shipperComplete(
         id,
         images,
         location,
@@ -303,23 +566,49 @@ export default function CompleteOrderScreen({ route }: any) {
         missingNote,
       );
 
-      // stopTracking();
-
       setNotify({
         visible: true,
         type: "success",
         message: "Xác nhận hoàn tất đơn hàng thành công",
       });
 
-      navigation.navigate("OrderList" as never);
-    } catch (err) {
+      // navigation.navigate("OrderList" as never);
+      navigation.reset({
+        index: 0,
+        routes: [{ name: "OrderList" as never }],
+      });
+    } catch (err: any) {
+      // Log tất cả mọi thứ
+      console.log("💥 CATCH ERROR 💥");
+      console.log("Error type:", typeof err);
+      console.log("Error keys:", Object.keys(err));
+      console.log("Error:", err);
+      console.log("Error message:", err?.message);
+      console.log("Error code:", err?.code);
+      console.log("Error response:", err?.response);
+      console.log("Error response data:", err?.response?.data);
+      console.log("Error response status:", err?.response?.status);
+      console.log("Error request:", err?.request);
+      console.log("Error config:", err?.config);
+      console.log("Error stack:", err?.stack);
+
+      // Log dạng JSON nếu có thể
+      try {
+        console.log("Error JSON:", JSON.stringify(err, null, 2));
+      } catch (e) {
+        console.log("Cannot stringify error");
+      }
+
       setNotify({
         visible: true,
         type: "error",
-        message: "Xác nhận hoàn tất đơn hàng thất bại",
+        message:
+          err?.response?.data?.message ||
+          err?.message ||
+          "Xác nhận hoàn tất đơn hàng thất bại",
       });
-      console.log("error completed: ", err);
     } finally {
+      submittingRef.current = false;
       setLoading(false);
     }
   };
@@ -329,9 +618,8 @@ export default function CompleteOrderScreen({ route }: any) {
     setShowSignModal(false);
   };
 
-  const isValid =
-    images.length > 0 
-    // && (orderType === "DELIVERY" || !!signaturePreview);
+  const isValid = images.length > 0;
+  // && (orderType === "DELIVERY" || !!signaturePreview);
 
   return (
     <KeyboardAwareScrollView
@@ -377,7 +665,9 @@ export default function CompleteOrderScreen({ route }: any) {
 
           <TouchableOpacity style={styles.actionBtn} onPress={pickImage}>
             <Ionicons name="image-outline" size={16} color="#8B5CF6" />
-            <Text style={[styles.actionBtnText, { color: "#8B5CF6" }]}>Chọn ảnh</Text>
+            <Text style={[styles.actionBtnText, { color: "#8B5CF6" }]}>
+              Chọn ảnh
+            </Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -387,7 +677,7 @@ export default function CompleteOrderScreen({ route }: any) {
         <View style={styles.sectionHeader}>
           <Ionicons name="pencil-outline" size={18} color="#F59E0B" />
           <Text style={styles.sectionTitle}>
-            Chữ ký khách hàng 
+            Chữ ký khách hàng
             {/* {orderType === "PICKUP" ? "*" : ""} */}
           </Text>
         </View>
@@ -405,7 +695,9 @@ export default function CompleteOrderScreen({ route }: any) {
               style={[styles.actionBtn, { marginTop: 8 }]}
             >
               <Ionicons name="refresh-outline" size={16} color="#F59E0B" />
-              <Text style={[styles.actionBtnText, { color: "#F59E0B" }]}>Ký lại</Text>
+              <Text style={[styles.actionBtnText, { color: "#F59E0B" }]}>
+                Ký lại
+              </Text>
             </TouchableOpacity>
           </View>
         ) : (
@@ -522,7 +814,11 @@ export default function CompleteOrderScreen({ route }: any) {
             </>
           ) : (
             <>
-              <Ionicons name="checkmark-circle-outline" size={20} color="#FFFFFF" />
+              <Ionicons
+                name="checkmark-circle-outline"
+                size={20}
+                color="#FFFFFF"
+              />
               <Text style={styles.completeText}> Xác nhận hoàn tất</Text>
             </>
           )}

@@ -46,10 +46,10 @@ export default function LoginScreen({ navigation }: any) {
       const user = res.data.user;
       const role = user.role;
 
-      if (!["QL", "NVGN"].includes(role)) {
-        setErrorMsg("Tài khoản không có quyền truy cập");
-        return;
-      }
+      // if (!["QL", "NVGN", "SUPERADMIN"].includes(role)) {
+      //   setErrorMsg("Tài khoản không có quyền truy cập");
+      //   return;
+      // }
 
       await saveUser(res.data.user, res.data.token, res.data.nhigia_expired);
 
@@ -159,7 +159,7 @@ export default function LoginScreen({ navigation }: any) {
               )}
 
             </View>
-            <Text style={styles.version}>Phiên bản hiện tại 1.1.4</Text>
+            <Text style={styles.version}>Phiên bản hiện tại 2.0.12</Text>
           </View>
         </ScrollView>
       </TouchableWithoutFeedback>

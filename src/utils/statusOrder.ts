@@ -21,6 +21,9 @@ export function statusColor(status: string) {
     case "SUPPLEMENT_REQUIRED":
       return { backgroundColor: "#ffedd5" };
 
+    case "ARISING":
+      return { backgroundColor: "#ffedd5" };
+
     case "INCOMPLETE":
       return { backgroundColor: "#fef2f2" };
 
@@ -64,6 +67,9 @@ export function statusTextColor(status: string) {
     case "SUPPLEMENT_REQUIRED":
       return { color: "#c2410c" };
 
+      case "ARISING":
+      return { color: "#c2410c" };
+
     case "INCOMPLETE":
       return { color: "#dc2626" };
 
@@ -104,6 +110,9 @@ export const getStatusBorderColor = (status: string) => {
     case "SUPPLEMENT_REQUIRED":
       return "#c2410c";
 
+    case "ARISING":
+      return "#c2410c";
+
     case "INCOMPLETE":
       return "#dc2626";
 
@@ -125,6 +134,7 @@ export function statusLabel(status: string) {
   const map: Record<string, string> = {
     PENDING: "Chờ tiếp nhận",
     ASSIGNED: "Đã điều phối",
+    ARISING: "Phát sinh",
     PROCESSING: "Đang thực hiện",
     COMPLETED: "Đã xong",
     FINISHED: "Hoàn tất",
@@ -147,6 +157,8 @@ export const actionConfig: any = {
   SHIPPER_ACCEPTED: { label: "NV giao nhận nhận đơn", color: "#6366f1" },
   SHIPPER_REJECTED: { label: "NV giao nhận từ chối", color: "#ef4444" },
   SHIPPER_COMPLETE: { label: "NV giao nhận hoàn thành", color: "#14b8a6" },
+  SHIPPER_ARISING: { label: "NV giao nhận gửi yêu cầu phát sinh", color: "#f97316" },
+  UPDATE_ARISING: { label: "Đã thay đổi thông tin do phát sinh", color: "#eab308" },
   SUPPLEMENT_REQUIRED: { label: "Yêu cầu bổ sung", color: "#f97316" },
   RESOLVE_SUPPLEMENT: { label: "Đã bổ sung", color: "#eab308" },
   RETURNED_CUSTOMER: { label: "Hoàn đơn (Khách không nhận)", color: "#dc2626" },
