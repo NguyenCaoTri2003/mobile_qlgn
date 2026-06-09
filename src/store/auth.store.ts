@@ -5,11 +5,11 @@ import { removeDeviceToken } from "../api/auth.api";
 
 export const saveUser = async (
   user: any,
-  token: string,
+  token: string | null,
   nhigiaExpired?: string
 ) => {
   await AsyncStorage.setItem("nhigia_user", JSON.stringify(user));
-  await AsyncStorage.setItem("access_token", token);
+  await AsyncStorage.setItem("access_token", token ?? "");
 
   if (nhigiaExpired) {
     await AsyncStorage.setItem("nhigia_expired", nhigiaExpired);

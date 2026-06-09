@@ -118,7 +118,7 @@ export interface Order {
   files?: { id: number; fileName: string; filePath: string, originalName: string }[];
 }
 
-export type UserRole = "QL" | "NVADMIN" | "NVGN" | "IT";
+export type UserRole = "QL" | "NVADMIN" | "NVGN" | "IT" | "SUPERADMIN";
 
 export interface User {
   id: number;

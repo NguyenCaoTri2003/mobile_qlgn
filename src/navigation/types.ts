@@ -13,4 +13,5 @@ export type OrdersStackParamList = {
   SupplementScreen: { id: number, createdBy: number, orderCode: string; creator: string};
   ReassignOrderScreen: { id: number, orderCode: string; attachments: any, deliveryDate: any, deliveryTime: any };
   OrderLogs: { orderId: number };
+  OrderForm: { orderData?: any };
 };

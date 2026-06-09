@@ -1,4 +1,10 @@
-import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import {
   View,
   Text,
@@ -10,6 +16,7 @@ import {
   RefreshControl,
   Modal,
   Platform,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -36,7 +43,7 @@ import {
   getDeptTextColor,
 } from "../utils/departmentColor";
 import NotFoundView from "../components/NotFoundView";
-import { useNavigation } from "@react-navigation/native";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { useOrderContext } from "../contexts/OrderContext";
 import { TextInput } from "react-native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -111,16 +118,38 @@ export default function OrderDetailScreen({ route }: any) {
 
   const [acceptLoading, setAcceptLoading] = useState(false);
 
+  const [finalizeModal, setFinalizeModal] = useState(false);
+  const [finalizeReason, setFinalizeReason] = useState("");
+  const [finalizeLoading, setFinalizeLoading] = useState(false);
+
+  const [supplementModal, setSupplementModal] = useState(false);
+  const [supplementNote, setSupplementNote] = useState("");
+  const [supplementLoading, setSupplementLoading] = useState(false);
+
+  const [ariseModal, setAriseModal] = useState(false);
+  const [ariseReason, setAriseReason] = useState("");
+  const [ariseLoading, setAriseLoading] = useState(false);
+
+  const [editCustomerModal, setEditCustomerModal] = useState(false);
+  const [newContact, setNewContact] = useState("");
+  const [newPhone, setNewPhone] = useState("");
+  const [newAddress, setNewAddress] = useState("");
+  const [updateCustomerLoading, setUpdateCustomerLoading] = useState(false);
+  const [addressTouched, setAddressTouched] = useState(false);
+
   const [notify, setNotify] = useState({
     visible: false,
     type: "success" as "success" | "error",
     message: "",
   });
 
-  const fetchDetail = async () => {
+  const fetchDetail = async (showLoading: boolean = false) => {
     try {
-      const res = await orderService.getOrderDetail(id);
+      if (showLoading) {
+        setLoading(true);
+      }
 
+      const res = await orderService.getOrderDetail(id);
       setOrder(res);
       setAttachments(res.attachments || []);
     } catch (err) {
@@ -131,11 +160,47 @@ export default function OrderDetailScreen({ route }: any) {
   };
 
   useEffect(() => {
-    fetchDetail();
-  }, [id]);
+    let isMounted = true;
+
+    const fetchData = async () => {
+      if (!isMounted) return;
+      setLoading(true);
+
+      try {
+        const res = await orderService.getOrderDetail(id);
+        if (isMounted) {
+          setOrder(res);
+          setAttachments(res.attachments || []);
+        }
+      } catch (err: any) {
+        console.log("Load detail error:", err);
+        if (isMounted) {
+          // Reset dữ liệu khi có lỗi
+          setOrder(null);
+          setAttachments([]);
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    fetchData();
+
+    // Lắng nghe focus event
+    const unsubscribe = navigation.addListener("focus", () => {
+      fetchData();
+    });
+
+    return () => {
+      isMounted = false;
+      unsubscribe();
+    };
+  }, [id, navigation]);
 
   useEffect(() => {
-    if (user?.role === "QL") {
+    if (user?.role === "QL" || user?.role === "SUPERADMIN") {
       fetchShippers();
     }
   }, [user?.role]);
@@ -145,27 +210,30 @@ export default function OrderDetailScreen({ route }: any) {
       headerRight: () => (
         <View style={{ flexDirection: "row", gap: 5 }}>
           {user.role !== "NVGN" && (
-            <TouchableOpacity
-              onPress={() =>
-                navigation.navigate("OrderLogs", { orderId: order.id })
-              }
-              style={[
-                styles.exportBtn,
-                { backgroundColor: "#16a34a20", borderColor: "#16a34a" },
-              ]}
-            >
-              <Ionicons name="time-outline" size={16} color="#16a34a" />
-              <Text style={[styles.exportText, { color: "#16a34a" }]}>
-                Lịch sử
-              </Text>
-            </TouchableOpacity>
+            <>
+              <TouchableOpacity
+                onPress={() =>
+                  navigation.navigate("OrderLogs", { orderId: order.id })
+                }
+                style={[
+                  styles.exportBtn,
+                  { backgroundColor: "#16a34a20", borderColor: "#16a34a" },
+                ]}
+              >
+                <Ionicons name="time-outline" size={16} color="#16a34a" />
+                <Text style={[styles.exportText, { color: "#16a34a" }]}>
+                  Lịch sử
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleExportDocx}
+                style={styles.exportBtn}
+              >
+                <Ionicons name="download-outline" size={16} color="#2563eb" />
+                <Text style={styles.exportText}>Xuất đơn</Text>
+              </TouchableOpacity>
+            </>
           )}
-
-          {/* Nút xuất đơn */}
-          <TouchableOpacity onPress={handleExportDocx} style={styles.exportBtn}>
-            <Ionicons name="download-outline" size={16} color="#2563eb" />
-            <Text style={styles.exportText}>Xuất đơn</Text>
-          </TouchableOpacity>
         </View>
       ),
     });
@@ -179,7 +247,7 @@ export default function OrderDetailScreen({ route }: any) {
 
       setShippers(res);
     } catch (err) {
-      console.log("Load shippers error:", err);
+      console.log("Load shippers error detail:", err);
     }
   };
 
@@ -193,6 +261,22 @@ export default function OrderDetailScreen({ route }: any) {
     } finally {
       setRefreshing(false);
     }
+  };
+
+  const parsePhoneNumbers = (phoneString: string) => {
+    if (!phoneString) return [];
+
+    // Tách theo dấu "/" hoặc "," hoặc ";"
+    return phoneString
+      .split(/[\/,;]/)
+      .map((num) => num.trim())
+      .filter((num) => num.length > 0);
+  };
+
+  // Hàm gọi điện
+  const callNumber = (phone: string) => {
+    if (!phone) return;
+    Linking.openURL(`tel:${phone}`);
   };
 
   const call = () => {
@@ -221,7 +305,7 @@ export default function OrderDetailScreen({ route }: any) {
       return ["ASSIGNED", "PENDING", "SUPPLEMENT_REQUIRED"].includes(status);
     }
 
-    if (role === "QL") {
+    if (role === "QL" || user?.role === "SUPERADMIN") {
       if (!isOwner) return false;
 
       if (orderType === "PICKUP") {
@@ -332,15 +416,31 @@ export default function OrderDetailScreen({ route }: any) {
     return "";
   };
 
-  const handleAcceptPress = () => {
+  // const handleAcceptPress = () => {
+  //   if (acceptLoading) return;
+
+  //   setAcceptLoading(true);
+
+  //   if (isPickup) {
+  //     handleAcceptPick();
+  //   } else {
+  //     handleAccept();
+  //   }
+  // };
+
+  const handleAcceptPress = async () => {
     if (acceptLoading) return;
 
-    setAcceptLoading(true);
+    try {
+      setAcceptLoading(true);
 
-    if (isPickup) {
-      handleAcceptPick();
-    } else {
-      handleAccept();
+      if (isPickup) {
+        await handleAcceptPick();
+      } else {
+        await handleAccept();
+      }
+    } finally {
+      setAcceptLoading(false);
     }
   };
 
@@ -350,6 +450,7 @@ export default function OrderDetailScreen({ route }: any) {
     if (missing.length > 0) {
       setMissingDocs(missing);
       setMissingModal(true);
+      setAcceptLoading(false);
       return;
     }
 
@@ -375,6 +476,8 @@ export default function OrderDetailScreen({ route }: any) {
       });
 
       console.log(err);
+    } finally {
+      setAcceptLoading(false);
     }
   };
 
@@ -399,6 +502,8 @@ export default function OrderDetailScreen({ route }: any) {
       });
 
       console.log(err);
+    } finally {
+      setAcceptLoading(false);
     }
   };
 
@@ -483,6 +588,133 @@ export default function OrderDetailScreen({ route }: any) {
 
       console.log(err);
     }
+  };
+
+  const handleResolveSupplement = async () => {
+    if (!supplementNote.trim()) {
+      setNotify({
+        visible: true,
+        type: "error",
+        message: "Vui lòng nhập thông tin đã bổ sung",
+      });
+      return;
+    }
+
+    setSupplementLoading(true);
+
+    try {
+      await orderService.resolveRequest(order.id, supplementNote);
+
+      setNotify({
+        visible: true,
+        type: "success",
+        message: "Đã xác nhận bổ sung hồ sơ thành công",
+      });
+
+      setSupplementModal(false);
+      setSupplementNote("");
+
+      setTimeout(async () => {
+        await reloadOrderCounts();
+        navigation.navigate("OrderList" as never);
+      }, 1600);
+    } catch (err: any) {
+      setNotify({
+        visible: true,
+        type: "error",
+        message: err?.response?.data?.message || "Có lỗi xảy ra",
+      });
+    } finally {
+      setSupplementLoading(false);
+    }
+  };
+
+  const handleAdminFinalize = async (approved: boolean) => {
+    if (!approved && !finalizeReason.trim()) {
+      setNotify({
+        visible: true,
+        type: "error",
+        message: "Vui lòng nhập lý do không duyệt",
+      });
+      return;
+    }
+
+    setFinalizeLoading(true);
+
+    try {
+      await orderService.adminFinalize(
+        order.id,
+        approved,
+        approved ? undefined : finalizeReason,
+      );
+
+      setNotify({
+        visible: true,
+        type: "success",
+        message: approved ? "Duyệt đơn thành công" : "Đã từ chối duyệt đơn",
+      });
+
+      setFinalizeModal(false);
+      setFinalizeReason("");
+
+      setTimeout(async () => {
+        await reloadOrderCounts();
+        navigation.navigate("OrderList" as never);
+      }, 1600);
+    } catch (err: any) {
+      setNotify({
+        visible: true,
+        type: "error",
+        message: err?.response?.data?.message || "Có lỗi xảy ra",
+      });
+    } finally {
+      setFinalizeLoading(false);
+    }
+  };
+
+  const handleEdit = () => {
+    navigation.navigate("OrderForm", { orderData: order });
+  };
+
+  const handleDelete = async (orderId: number) => {
+    Alert.alert(
+      "Xác nhận xoá đơn",
+      "Bạn có chắc chắn muốn xoá đơn này không?",
+      [
+        {
+          text: "Huỷ",
+          style: "cancel",
+        },
+        {
+          text: "Xoá",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await orderService.deleteOrder(orderId);
+
+              setNotify({
+                visible: true,
+                type: "success",
+                message: "Đã xoá đơn thành công",
+              });
+
+              setTimeout(async () => {
+                await reloadOrderCounts();
+                navigation.navigate("OrderList" as never);
+              }, 1600);
+            } catch (err) {
+              setNotify({
+                visible: true,
+                type: "error",
+                message: "Xoá đơn thất bại",
+              });
+
+              console.log(err);
+            }
+          },
+        },
+      ],
+    );
   };
 
   const confirmReject = async () => {
@@ -641,8 +873,6 @@ export default function OrderDetailScreen({ route }: any) {
         html,
       });
 
-      console.log("PDF created:", uri);
-
       const isAvailable = await Sharing.isAvailableAsync();
       if (!isAvailable) return;
 
@@ -786,7 +1016,7 @@ export default function OrderDetailScreen({ route }: any) {
     }
   };
 
-  if (loading) {
+  if (loading && !order) {
     return (
       <View style={styles.center}>
         <ActivityIndicator size="large" color="#2563eb" />
@@ -794,7 +1024,7 @@ export default function OrderDetailScreen({ route }: any) {
     );
   }
 
-  if (!order) {
+  if (!order && !loading) {
     return (
       <NotFoundView
         title="Không tìm thấy đơn hàng"
@@ -804,10 +1034,12 @@ export default function OrderDetailScreen({ route }: any) {
     );
   }
 
-  const isQLAssign = user?.role === "QL" && order?.status === "PENDING";
+  const isQLAssign =
+    (user?.role === "QL" || user?.role === "SUPERADMIN") &&
+    order?.status === "PENDING";
 
   const isQLReturned =
-    user?.role === "QL" &&
+    (user?.role === "QL" || user?.role === "SUPERADMIN") &&
     (order?.status === "RETURNED_CUSTOMER" ||
       order?.status === "RETURNED_PERSONAL" ||
       order?.status === "REJECTED" ||
@@ -823,9 +1055,6 @@ export default function OrderDetailScreen({ route }: any) {
     order?.status === "PROCESSING" &&
     (user?.role === "NVGN" ||
       (user?.role === "QL" && order?.shipperId === user?.id));
-
-  const hasActions =
-    isQLAssign || isQLReturned || isNVGNAssigned || isNVGNProcessing;
 
   // const canReassign =
   //   order?.status === "RETURNED_PERSONAL" ||
@@ -850,6 +1079,137 @@ export default function OrderDetailScreen({ route }: any) {
     ["RETURNED_CUSTOMER", "RETURNED_PERSONAL"].includes(order?.status) &&
     approval === "PENDING";
 
+  const isAdmin = user?.role === "NVADMIN" || user?.role === "SUPERADMIN";
+  const canAdminApprove = isAdmin && ["COMPLETED"].includes(order?.status);
+  const canPending = isAdmin && order?.status === "PENDING";
+  const canSupplement = isAdmin && order?.status === "SUPPLEMENT_REQUIRED";
+
+  // Check điều kiện hiển thị nút phát sinh cho NVGN
+  const isNVGNArise =
+    (order?.status === "ASSIGNED" || order?.status === "PROCESSING") &&
+    (user?.role === "NVGN" ||
+      (user?.role === "QL" && order?.shipperId === user?.id));
+
+  // Check điều kiện hiển thị nút thay đổi thông tin cho admin
+  const isAdminArise =
+    (user?.role === "NVADMIN" || user?.role === "SUPERADMIN") &&
+    order?.status === "ARISING";
+
+  const isNVGNAriseReject =
+    order?.status === "ARISING" &&
+    (user?.role === "NVGN" ||
+      (user?.role === "QL" && order?.shipperId === user?.id));
+
+  const hasActions =
+    isQLAssign ||
+    isQLReturned ||
+    isNVGNAssigned ||
+    isNVGNProcessing ||
+    canReassign ||
+    canApprove ||
+    canAdminApprove ||
+    canPending ||
+    canSupplement ||
+    isAdminArise ||
+    isNVGNAriseReject;
+
+  const handleArise = async () => {
+    if (ariseLoading) return;
+
+    setAriseLoading(true);
+
+    try {
+      await orderService.shipperArising(order.id, ariseReason, order.orderCode);
+
+      setAriseModal(false);
+      setAriseReason("");
+
+      setNotify({
+        visible: true,
+        type: "success",
+        message: "Đã gửi yêu cầu phát sinh đến admin",
+      });
+
+      setTimeout(async () => {
+        await reloadOrderCounts();
+        await fetchDetail();
+      }, 500);
+    } catch (err: any) {
+      setNotify({
+        visible: true,
+        type: "error",
+        message:
+          err?.response?.data?.message || "Gửi yêu cầu phát sinh thất bại",
+      });
+    } finally {
+      setAriseLoading(false);
+    }
+  };
+
+  // Mở modal thay đổi thông tin khách hàng
+  const openEditCustomer = () => {
+    setNewContact(order.contactNew || order.contact || "");
+    setNewPhone(order.phoneNew || order.phone || "");
+    setNewAddress(order.addressNew || order.address || "");
+    setAddressTouched(false);
+    setEditCustomerModal(true);
+  };
+
+  const canSaveCustomerInfo = () => {
+    // Địa chỉ không được để trống
+    if (!newAddress || !newAddress.trim()) {
+      return false;
+    }
+
+    // Phải có ít nhất 1 thay đổi
+    const contactChanged = newContact !== (order.contact || "");
+    const phoneChanged = newPhone !== (order.phone || "");
+    const addressChanged = newAddress !== (order.address || "");
+
+    return contactChanged || phoneChanged || addressChanged;
+  };
+
+  // Lưu thông tin khách hàng mới
+  const saveCustomerInfo = async () => {
+    if (!canSaveCustomerInfo() || updateCustomerLoading) return;
+
+    setUpdateCustomerLoading(true);
+
+    try {
+      await orderService.updateArising(
+        order.id,
+        newContact || "",
+        newPhone || "",
+        newAddress || "",
+      );
+
+      setNotify({
+        visible: true,
+        type: "success",
+        message: "Đã cập nhật thông tin khách hàng mới",
+      });
+
+      setEditCustomerModal(false);
+      setNewContact("");
+      setNewPhone("");
+      setNewAddress("");
+      setAddressTouched(false);
+
+      setTimeout(async () => {
+        await reloadOrderCounts();
+        await fetchDetail();
+      }, 500);
+    } catch (err: any) {
+      setNotify({
+        visible: true,
+        type: "error",
+        message: err?.response?.data?.message || "Cập nhật thất bại",
+      });
+    } finally {
+      setUpdateCustomerLoading(false);
+    }
+  };
+
   const deliveryStatus = getDeliveryStatus(
     order.date,
     order.time,
@@ -871,6 +1231,15 @@ export default function OrderDetailScreen({ route }: any) {
   }));
 
   const deliveryStyle = getDeliveryStyle(order.date, order.time, order.status);
+
+  const rejectReasons = [
+    "Khách hàng không nghe máy",
+    "Khách hàng đổi địa chỉ",
+    "Khách hàng hẹn lại ngày khác",
+    "Lỗi hệ thống không hiện đơn",
+    "Yêu cầu phát sinh không được phản hồi",
+    "Không liên lạc được với khách hàng",
+  ];
 
   return (
     <SafeAreaView style={styles.container} edges={["left", "right"]}>
@@ -1001,14 +1370,35 @@ export default function OrderDetailScreen({ route }: any) {
             </View>
 
             <Text style={styles.creatorName}>{order.senderName}</Text>
-            <Text style={styles.creatorEmail}>{order.senderEmail || ""}</Text>
+            <View style={styles.creatorContactRow}>
+              <Text style={styles.creatorEmail}>{order.senderEmail || ""}</Text>
+
+              {order.senderPhone && (
+                <View style={styles.phoneList}>
+                  {parsePhoneNumbers(order.senderPhone).map((phone, index) => (
+                    <TouchableOpacity
+                      key={index}
+                      onPress={() => callNumber(phone)}
+                      style={styles.phoneItem}
+                    >
+                      <Ionicons name="call-outline" size={10} color="#2563eb" />
+                      <Text style={styles.creatorPhone}>{phone}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+            </View>
           </View>
         )}
 
         {order.missingDocs && (
           <View style={styles.alertRed}>
             <Text style={styles.alertRedText}>
-              <Text style={{ fontWeight: "700" }}>Thiếu hồ sơ: </Text>
+              <Text
+                style={{ fontWeight: "700", fontSize: 11, color: "#a31616" }}
+              >
+                Thiếu hồ sơ:{" "}
+              </Text>
               {order.missingDocs}
             </Text>
           </View>
@@ -1017,7 +1407,11 @@ export default function OrderDetailScreen({ route }: any) {
         {order.status === "REJECTED" && order.rejectionReason && (
           <View style={styles.alertRed}>
             <Text style={styles.alertRedText}>
-              <Text style={{ fontWeight: "700" }}>Lý do từ chối: </Text>
+              <Text
+                style={{ fontWeight: "700", fontSize: 11, color: "#a31616" }}
+              >
+                Lý do từ chối:{" "}
+              </Text>
               {order.rejectionReason}
             </Text>
           </View>
@@ -1026,47 +1420,188 @@ export default function OrderDetailScreen({ route }: any) {
         {order.status === "SUPPLEMENT_REQUIRED" && order.supplementNote && (
           <View style={styles.alertYellow}>
             <Text style={styles.alertYellowText}>
-              <Text style={{ fontWeight: "700" }}>Yêu cầu bổ sung: </Text>
+              <Text
+                style={{ fontWeight: "700", fontSize: 11, color: "#645e0d" }}
+              >
+                Yêu cầu bổ sung:{" "}
+              </Text>
               {order.supplementNote}
             </Text>
           </View>
         )}
 
+        {order.status === "ARISING" && order.arisingReason && (
+          <View style={styles.alertYellow}>
+            <Text style={styles.alertYellowText}>
+              <Text
+                style={{ fontWeight: "700", fontSize: 11, color: "#645e0d" }}
+              >
+                Yêu cầu phát sinh:{" "}
+              </Text>
+              {order.arisingReason}
+            </Text>
+          </View>
+        )}
+
         {order.adminResponse && (
-          <View style={styles.alertGreen}>
-            <View
+          <View style={styles.alertRed}>
+            {/* <View
               style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
-            >
-              <Ionicons name="checkmark-circle" size={12} color="#16a34a" />
-              <Text style={styles.alertGreenText}>{order.adminResponse}</Text>
+            > */}
+            <Text style={{ fontWeight: "700", fontSize: 11, color: "#a31616" }}>
+              Lý do từ chối:{" "}
+            </Text>
+            <Text style={styles.alertRedText}>{order.adminResponse}</Text>
+            {/* </View> */}
+          </View>
+        )}
+
+        {/* New Customer Info Card (if exists) */}
+        {(order.contactNew || order.phoneNew || order.addressNew) && (
+          <View style={styles.newCustomerCard}>
+            {/* Badge Mới */}
+            <View style={styles.newCustomerBadge}>
+              <Ionicons name="swap-horizontal" size={12} color="#fff" />
+              <Text style={styles.newCustomerBadgeText}>Thông tin mới</Text>
+            </View>
+
+            <View style={{ marginTop: 8 }}>
+              <Text style={styles.company}>{order.company}</Text>
+
+              <TouchableOpacity
+                style={styles.row}
+                onPress={() => callNumber(order.phoneNew)}
+              >
+                <Ionicons name="call-outline" size={14} color="#2563eb" />
+                <Text style={styles.link}>
+                  {order.phoneNew || "Không có số điện thoại"}
+                </Text>
+              </TouchableOpacity>
+
+              {order.addressNew ? (
+                <TouchableOpacity
+                  style={styles.row}
+                  onPress={() => {
+                    const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.addressNew)}`;
+                    Linking.openURL(url);
+                  }}
+                >
+                  <Ionicons name="location-outline" size={14} color="#2563eb" />
+                  <Text style={styles.link}>{order.addressNew}</Text>
+                </TouchableOpacity>
+              ) : null}
+
+              <View style={styles.row}>
+                <Ionicons name="person-outline" size={14} color="#6b7280" />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.value}>
+                    {order.contactNew || "Không có tên người liên hệ"}
+                  </Text>
+                </View>
+              </View>
             </View>
           </View>
         )}
 
-        {/* CUSTOMER CARD */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Khách hàng</Text>
-
-          <Text style={styles.company}>{order.company}</Text>
-
-          <TouchableOpacity style={styles.row} onPress={call}>
-            <Ionicons name="call-outline" size={14} color="#2563eb" />
-            <Text style={styles.link}>
-              {order.phone || "Không có số điện thoại"}
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.row} onPress={openMap}>
-            <Ionicons name="location-outline" size={14} color="#2563eb" />
-            <Text style={styles.link}>{order.address}</Text>
-          </TouchableOpacity>
-
-          <View style={styles.row}>
-            <Ionicons name="person-outline" size={14} color="#6b7280" />
-            <Text style={styles.value}>
-              {order.contact || "Không có người liên hệ"}
-            </Text>
+        {/* Divider giữa mới và cũ */}
+        {(order.contactNew || order.phoneNew || order.addressNew) && (
+          <View style={styles.dividerContainer}>
+            <View style={styles.dividerLine} />
+            <View style={styles.dividerLabelContainer}>
+              <Text style={styles.dividerLabel}>Thông tin cũ</Text>
+            </View>
           </View>
+        )}
+
+        {/* Main Info (Cũ hoặc mặc định) */}
+        <View
+          style={[
+            styles.card,
+            (order.contactNew || order.phoneNew || order.addressNew) &&
+              styles.oldCustomerCard,
+          ]}
+        >
+          <Text style={styles.cardTitle}>
+            {order.contactNew || order.phoneNew || order.addressNew
+              ? "Khách hàng (Cũ)"
+              : "Khách hàng"}
+          </Text>
+
+          <Text
+            style={[
+              styles.company,
+              (order.contactNew || order.phoneNew || order.addressNew) &&
+                styles.oldText,
+            ]}
+          >
+            {order.company}
+          </Text>
+
+          {order.phone ? (
+            <TouchableOpacity style={styles.row} onPress={call}>
+              <Ionicons
+                name="call-outline"
+                size={14}
+                color={
+                  order.contactNew || order.phoneNew || order.addressNew
+                    ? "#9ca3af"
+                    : "#2563eb"
+                }
+              />
+              <Text
+                style={[
+                  styles.link,
+                  (order.contactNew || order.phoneNew || order.addressNew) &&
+                    styles.oldLink,
+                ]}
+              >
+                {order.phone || "Không có số điện thoại"}
+              </Text>
+            </TouchableOpacity>
+          ) : null}
+
+          {order.address ? (
+            order.contactNew || order.phoneNew || order.addressNew ? (
+              <View style={styles.row}>
+                <Ionicons name="location-outline" size={14} color="#9ca3af" />
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.value, styles.oldText]}>
+                    {order.address}
+                  </Text>
+                </View>
+              </View>
+            ) : (
+              <TouchableOpacity style={styles.row} onPress={openMap}>
+                <Ionicons name="location-outline" size={14} color="#2563eb" />
+                <Text style={styles.link}>{order.address}</Text>
+              </TouchableOpacity>
+            )
+          ) : null}
+
+          {order.contact ? (
+            <View style={styles.row}>
+              <Ionicons
+                name="person-outline"
+                size={14}
+                color={
+                  order.contactNew || order.phoneNew || order.addressNew
+                    ? "#9ca3af"
+                    : "#6b7280"
+                }
+              />
+              <View style={{ flex: 1 }}>
+                <Text
+                  style={[
+                    styles.value,
+                    (order.contactNew || order.phoneNew || order.addressNew) &&
+                      styles.oldText,
+                  ]}
+                >
+                  {order.contact || "Không có người liên hệ"}
+                </Text>
+              </View>
+            </View>
+          ) : null}
         </View>
 
         {/* DELIVERY INFO */}
@@ -1077,23 +1612,35 @@ export default function OrderDetailScreen({ route }: any) {
             style={[
               styles.deliveryBox,
               {
-                backgroundColor: deliveryStyle.bg,
-                borderColor: deliveryStyle.bg,
+                backgroundColor: order.timeSlot ? "#EFF6FF" : deliveryStyle.bg,
+                borderColor: order.timeSlot ? "#BFDBFE" : deliveryStyle.bg,
               },
             ]}
           >
             <Ionicons
               name="time-outline"
               size={12}
-              color={deliveryStyle.icon}
+              color={order.timeSlot ? "#3B82F6" : deliveryStyle.icon}
             />
 
-            <Text style={[styles.deliveryText, { color: deliveryStyle.text }]}>
-              {order.time || "Chưa có giờ"} •
+            <Text
+              style={[
+                styles.deliveryText,
+                {
+                  color: order.timeSlot ? "#1D4ED8" : deliveryStyle.text,
+                },
+              ]}
+            >
+              {order.timeSlot
+                ? order.timeSlot === "MORNING"
+                  ? "Buổi sáng"
+                  : "Buổi chiều"
+                : order.time || "Chưa có giờ"}{" "}
+              •
               {order.date === new Date().toISOString().split("T")[0]
                 ? " Hôm nay"
                 : formatDate(order.date)}
-              {deliveryStatus && (
+              {!order.timeSlot && deliveryStatus && (
                 <Text style={{ color: deliveryStyle.text }}>
                   {" "}
                   • {deliveryStatus}
@@ -1671,7 +2218,54 @@ export default function OrderDetailScreen({ route }: any) {
               </View>
             </View>
           )}
-
+          {canPending && (
+            <View style={styles.rowButtons}>
+              <TouchableOpacity
+                style={styles.editBtn}
+                onPress={() => handleEdit()}
+              >
+                <Text style={styles.btnText}>Chỉnh sửa</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.rejectBtn}
+                onPress={() => handleDelete(order.id)}
+              >
+                <Text style={styles.btnText}>Xoá đơn</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+          {canSupplement && (
+            <View style={styles.rowButtons}>
+              <TouchableOpacity
+                style={styles.editBtn}
+                onPress={() => handleEdit()}
+              >
+                <Text style={styles.btnText}>Chỉnh sửa</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.approveBtn}
+                onPress={() => setSupplementModal(true)}
+              >
+                <Text style={styles.btnText}>Xác nhận bổ sung</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+          {canAdminApprove && (
+            <View style={styles.rowButtons}>
+              <TouchableOpacity
+                style={styles.approveBtn}
+                onPress={() => handleAdminFinalize(true)}
+              >
+                <Text style={styles.btnText}>Duyệt</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.rejectBtn}
+                onPress={() => setFinalizeModal(true)}
+              >
+                <Text style={styles.btnText}>Không duyệt</Text>
+              </TouchableOpacity>
+            </View>
+          )}
           {isQLReturned && (
             <View style={styles.card}>
               <Text style={styles.cardTitle}>Xử lý đơn</Text>
@@ -1737,7 +2331,6 @@ export default function OrderDetailScreen({ route }: any) {
               </View>
             </View>
           )}
-
           {isNVGNAssigned && (
             <View style={styles.btnContainer}>
               <TouchableOpacity
@@ -1764,7 +2357,6 @@ export default function OrderDetailScreen({ route }: any) {
               </TouchableOpacity>
             </View>
           )}
-
           {isNVGNProcessing && (
             <View style={styles.btnContainer}>
               <TouchableOpacity style={styles.btnDone} onPress={handleComplete}>
@@ -1777,6 +2369,32 @@ export default function OrderDetailScreen({ route }: any) {
                 <Text style={styles.btnText}>Hoàn đơn</Text>
               </TouchableOpacity>
             </View>
+          )}
+          {isNVGNArise && (
+            <TouchableOpacity
+              style={styles.btnArise}
+              onPress={() => setAriseModal(true)}
+              disabled={ariseLoading}
+            >
+              <Text style={styles.btnText}>Có phát sinh</Text>
+            </TouchableOpacity>
+          )}
+          {isNVGNAriseReject && (
+            <TouchableOpacity
+              style={[styles.btnReject, acceptLoading && styles.btnDisabled]}
+              onPress={() => setRejectModal(true)}
+              disabled={acceptLoading}
+            >
+              <Text style={styles.btnText}>Từ chối</Text>
+            </TouchableOpacity>
+          )}
+          {isAdminArise && (
+            <TouchableOpacity
+              style={styles.btnEditCustomer}
+              onPress={openEditCustomer}
+            >
+              <Text style={styles.btnText}>Thay đổi thông tin khách hàng</Text>
+            </TouchableOpacity>
           )}
         </View>
       )}
@@ -1857,11 +2475,12 @@ export default function OrderDetailScreen({ route }: any) {
             {/* HEADER */}
             <View style={styles.rejectHeader}>
               <Ionicons name="close-circle-outline" size={20} color="#dc2626" />
-              <Text style={styles.rejectTitle}>Từ chối đơn</Text>
+              <Text style={styles.rejectTitle}>Lý do từ chối đơn</Text>
             </View>
 
             <Text style={styles.rejectSubtitle}>
-              Vui lòng nhập lý do từ chối để hệ thống thông báo lại cho admin.
+              Vui lòng nhập hoặc chọn lý do từ chối để hệ thống thông báo lại
+              cho trưởng phòng và admin.
             </Text>
 
             {/* INPUT */}
@@ -1873,11 +2492,41 @@ export default function OrderDetailScreen({ route }: any) {
               style={styles.rejectInput}
             />
 
+            {/* QUICK REASONS */}
+            <Text style={styles.quickReasonsLabel}>
+              Lý do thường gặp (Có thể chọn nhanh hoặc nhập nếu lí do khác):
+            </Text>
+            <View style={styles.quickReasonsContainer}>
+              {rejectReasons.map((reason, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={[
+                    styles.quickReasonChip,
+                    rejectReason === reason && styles.quickReasonChipActive,
+                  ]}
+                  onPress={() => setRejectReason(reason)}
+                >
+                  <Text
+                    style={[
+                      styles.quickReasonText,
+                      rejectReason === reason && styles.quickReasonTextActive,
+                    ]}
+                  >
+                    {reason}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
             {/* BUTTONS */}
             <View style={styles.rejectButtons}>
               <TouchableOpacity
-                style={styles.rejectConfirmBtn}
+                style={[
+                  styles.rejectConfirmBtn,
+                  !rejectReason.trim() && styles.btnDisabled,
+                ]}
                 onPress={confirmReject}
+                disabled={!rejectReason.trim()}
               >
                 <Ionicons name="close-outline" size={14} color="white" />
                 <Text style={styles.rejectConfirmText}>Xác nhận từ chối</Text>
@@ -1885,7 +2534,10 @@ export default function OrderDetailScreen({ route }: any) {
 
               <TouchableOpacity
                 style={styles.rejectCancelBtn}
-                onPress={() => setRejectModal(false)}
+                onPress={() => {
+                  setRejectModal(false);
+                  setRejectReason("");
+                }}
               >
                 <Text style={styles.rejectCancelText}>Huỷ</Text>
               </TouchableOpacity>
@@ -1972,6 +2624,355 @@ export default function OrderDetailScreen({ route }: any) {
                 <Text style={styles.confirmText}>Xác nhận</Text>
               </TouchableOpacity>
             </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={finalizeModal} transparent animationType="fade">
+        <View style={styles.modalOverlayReject}>
+          <View style={styles.rejectModalBox}>
+            {/* HEADER */}
+            <View style={styles.rejectHeader}>
+              <Ionicons name="close-circle-outline" size={20} color="#dc2626" />
+              <Text style={styles.rejectTitle}>Từ chối duyệt đơn</Text>
+            </View>
+
+            <Text style={styles.rejectSubtitle}>
+              Vui lòng nhập lý do từ chối duyệt đơn hoàn tất.
+            </Text>
+
+            {/* INPUT */}
+            <TextInput
+              placeholder="Nhập lý do từ chối..."
+              value={finalizeReason}
+              onChangeText={setFinalizeReason}
+              multiline
+              style={styles.rejectInput}
+            />
+
+            {/* BUTTONS */}
+            <View style={styles.rejectButtons}>
+              <TouchableOpacity
+                style={styles.rejectConfirmBtn}
+                onPress={() => handleAdminFinalize(false)}
+                disabled={finalizeLoading}
+              >
+                {finalizeLoading ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <>
+                    <Ionicons name="close-outline" size={14} color="white" />
+                    <Text style={styles.rejectConfirmText}>
+                      Xác nhận từ chối
+                    </Text>
+                  </>
+                )}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.rejectCancelBtn}
+                onPress={() => {
+                  setFinalizeModal(false);
+                  setFinalizeReason("");
+                }}
+                disabled={finalizeLoading}
+              >
+                <Text style={styles.rejectCancelText}>Huỷ</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal nhập thông tin đã bổ sung */}
+      <Modal visible={supplementModal} transparent animationType="fade">
+        <View style={styles.modalOverlayReject}>
+          <View style={styles.rejectModalBox}>
+            {/* HEADER */}
+            <View style={styles.rejectHeader}>
+              <Ionicons
+                name="checkmark-circle-outline"
+                size={20}
+                color="#16a34a"
+              />
+              <Text style={[styles.rejectTitle, { color: "#16a34a" }]}>
+                Xác nhận đã bổ sung hồ sơ
+              </Text>
+            </View>
+
+            <Text style={styles.rejectSubtitle}>
+              Vui lòng nhập chi tiết những hồ sơ đã bổ sung.
+            </Text>
+
+            {/* INPUT */}
+            <TextInput
+              placeholder="Nhập thông tin hồ sơ đã bổ sung..."
+              value={supplementNote}
+              onChangeText={setSupplementNote}
+              multiline
+              style={styles.rejectInput}
+            />
+
+            {/* BUTTONS */}
+            <View style={styles.rejectButtons}>
+              <TouchableOpacity
+                style={[
+                  styles.rejectConfirmBtn,
+                  { backgroundColor: "#16a34a" },
+                ]}
+                onPress={handleResolveSupplement}
+                disabled={supplementLoading}
+              >
+                {supplementLoading ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <>
+                    <Ionicons
+                      name="checkmark-outline"
+                      size={14}
+                      color="white"
+                    />
+                    <Text style={styles.rejectConfirmText}>
+                      Xác nhận đã bổ sung
+                    </Text>
+                  </>
+                )}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.rejectCancelBtn}
+                onPress={() => {
+                  setSupplementModal(false);
+                  setSupplementNote("");
+                }}
+                disabled={supplementLoading}
+              >
+                <Text style={styles.rejectCancelText}>Huỷ</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal gửi yêu cầu phát sinh */}
+      <Modal visible={ariseModal} transparent animationType="fade">
+        <View style={styles.modalOverlayReject}>
+          <View style={styles.rejectModalBox}>
+            {/* HEADER */}
+            <View style={styles.rejectHeader}>
+              <Ionicons name="warning-outline" size={20} color="#f97316" />
+              <Text style={[styles.rejectTitle, { color: "#f97316" }]}>
+                Gửi yêu cầu phát sinh
+              </Text>
+            </View>
+
+            <Text style={styles.rejectSubtitle}>
+              Gửi yêu cầu phát sinh đến admin bàn giao hồ sơ.
+            </Text>
+
+            <Text
+              style={[
+                styles.rejectSubtitle,
+                { fontStyle: "italic", color: "#9ca3af" },
+              ]}
+            >
+              (Lý do phát sinh không bắt buộc)
+            </Text>
+
+            {/* INPUT */}
+            <TextInput
+              placeholder="Nhập lý do phát sinh (không bắt buộc)..."
+              value={ariseReason}
+              onChangeText={setAriseReason}
+              multiline
+              style={styles.rejectInput}
+            />
+
+            {/* BUTTONS */}
+            <View style={styles.rejectButtons}>
+              <TouchableOpacity
+                style={[
+                  styles.rejectConfirmBtn,
+                  { backgroundColor: "#f97316" },
+                ]}
+                onPress={handleArise}
+                disabled={ariseLoading}
+              >
+                {ariseLoading ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <>
+                    <Ionicons name="send-outline" size={14} color="white" />
+                    <Text style={styles.rejectConfirmText}>
+                      Xác nhận gửi yêu cầu
+                    </Text>
+                  </>
+                )}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.rejectCancelBtn}
+                onPress={() => {
+                  setAriseModal(false);
+                  setAriseReason("");
+                }}
+                disabled={ariseLoading}
+              >
+                <Text style={styles.rejectCancelText}>Huỷ</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal thay đổi thông tin khách hàng */}
+      <Modal visible={editCustomerModal} transparent animationType="fade">
+        <View style={styles.modalOverlayReject}>
+          <View style={styles.editCustomerModalBox}>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {/* HEADER */}
+              <View style={styles.rejectHeader}>
+                <Ionicons
+                  name="swap-horizontal-outline"
+                  size={20}
+                  color="#f97316"
+                />
+                <Text style={[styles.rejectTitle, { color: "#f97316" }]}>
+                  Thêm thông tin khách hàng mới do có phát sinh
+                </Text>
+              </View>
+
+              <Text style={styles.editCustomerHint}>
+                Thông tin mới sẽ được hiển thị phía trên thông tin cũ.
+                {order.contact || order.phone || order.address
+                  ? " Bấm X để xóa và nhập giá trị mới."
+                  : " Nhập thông tin mới vào các trường bên dưới."}
+              </Text>
+
+              {/* Contact */}
+              <View style={styles.editFieldContainer}>
+                <Text style={styles.editFieldLabel}>Người liên hệ mới</Text>
+                <View style={styles.editInputWrapper}>
+                  <TextInput
+                    style={styles.editInput}
+                    value={newContact}
+                    onChangeText={setNewContact}
+                    placeholder={order.contact || "Nhập người liên hệ mới..."}
+                    placeholderTextColor="#9ca3af"
+                  />
+                  {newContact ? (
+                    <TouchableOpacity
+                      style={styles.editInputClearBtn}
+                      onPress={() => setNewContact("")}
+                    >
+                      <Ionicons name="close" size={16} color="#9ca3af" />
+                    </TouchableOpacity>
+                  ) : null}
+                </View>
+              </View>
+
+              {/* Phone */}
+              <View style={styles.editFieldContainer}>
+                <Text style={styles.editFieldLabel}>Số điện thoại mới</Text>
+                <View style={styles.editInputWrapper}>
+                  <TextInput
+                    style={styles.editInput}
+                    value={newPhone}
+                    onChangeText={setNewPhone}
+                    placeholder={order.phone || "Nhập số điện thoại mới..."}
+                    placeholderTextColor="#9ca3af"
+                    keyboardType="phone-pad"
+                  />
+                  {newPhone ? (
+                    <TouchableOpacity
+                      style={styles.editInputClearBtn}
+                      onPress={() => setNewPhone("")}
+                    >
+                      <Ionicons name="close" size={16} color="#9ca3af" />
+                    </TouchableOpacity>
+                  ) : null}
+                </View>
+              </View>
+
+              {/* Address (Required) */}
+              <View style={styles.editFieldContainer}>
+                <Text style={styles.editFieldLabel}>
+                  Địa chỉ mới <Text style={{ color: "#ef4444" }}>*</Text>
+                </Text>
+                <View style={styles.editInputWrapper}>
+                  <TextInput
+                    style={[
+                      styles.editInput,
+                      styles.editInputMultiline,
+                      addressTouched && !newAddress && styles.editInputError,
+                    ]}
+                    value={newAddress}
+                    onChangeText={(text) => {
+                      setNewAddress(text);
+                      if (!addressTouched) setAddressTouched(true);
+                    }}
+                    placeholder="Nhập địa chỉ (bắt buộc)..."
+                    placeholderTextColor="#9ca3af"
+                    multiline
+                  />
+                  {newAddress ? (
+                    <TouchableOpacity
+                      style={styles.editInputClearBtnMultiline}
+                      onPress={() => {
+                        setNewAddress("");
+                        setAddressTouched(true);
+                      }}
+                    >
+                      <Ionicons name="close" size={16} color="#9ca3af" />
+                    </TouchableOpacity>
+                  ) : null}
+                </View>
+                {addressTouched && !newAddress ? (
+                  <Text style={styles.editErrorText}>
+                    Địa chỉ là bắt buộc, không được để trống
+                  </Text>
+                ) : null}
+              </View>
+
+              {/* BUTTONS */}
+              <View style={styles.editCustomerButtons}>
+                <TouchableOpacity
+                  style={[
+                    styles.rejectConfirmBtn,
+                    { backgroundColor: "#f97316", flex: 1 },
+                    (!canSaveCustomerInfo() || updateCustomerLoading) &&
+                      styles.btnDisabled,
+                  ]}
+                  onPress={saveCustomerInfo}
+                  disabled={!canSaveCustomerInfo() || updateCustomerLoading}
+                >
+                  {updateCustomerLoading ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <Text style={styles.rejectConfirmText}>Lưu thay đổi</Text>
+                  )}
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.rejectConfirmBtn,
+                    { flex: 1, backgroundColor: "#b3b3b3" },
+                  ]}
+                  onPress={() => {
+                    setEditCustomerModal(false);
+                    setNewContact("");
+                    setNewPhone("");
+                    setNewAddress("");
+                    setAddressTouched(false);
+                  }}
+                  disabled={updateCustomerLoading}
+                >
+                  <Text style={[styles.rejectCancelText, { color: "#000000" }]}>
+                    Huỷ
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
           </View>
         </View>
       </Modal>
@@ -2586,6 +3587,7 @@ const styles = StyleSheet.create({
   rejectCancelBtn: {
     alignItems: "center",
     paddingVertical: 8,
+    borderWidth: 1,
   },
 
   rejectCancelText: {
@@ -2852,6 +3854,15 @@ const styles = StyleSheet.create({
     marginRight: 4,
     alignItems: "center",
     backgroundColor: "#16a34a",
+  },
+
+  editBtn: {
+    flex: 1,
+    padding: 10,
+    borderRadius: 6,
+    marginRight: 4,
+    alignItems: "center",
+    backgroundColor: "#8a18be",
   },
 
   exportBtn: {
@@ -3340,5 +4351,295 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+  },
+  creatorContactRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    marginTop: 2,
+  },
+
+  phoneList: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    marginLeft: 4,
+  },
+
+  phoneItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#dbeafe",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 12,
+    marginRight: 6,
+    marginVertical: 2,
+    gap: 3,
+  },
+
+  creatorPhone: {
+    fontSize: 10,
+    color: "#2563eb",
+    fontWeight: "500",
+    textDecorationLine: "underline",
+  },
+  btnArise: {
+    backgroundColor: "#f97316",
+    padding: 10,
+    borderRadius: 6,
+    alignItems: "center",
+    marginTop: 8,
+  },
+
+  btnEditCustomer: {
+    backgroundColor: "#f97316",
+    padding: 10,
+    borderRadius: 6,
+    alignItems: "center",
+    marginBottom: 8,
+  },
+
+  editCustomerModalBox: {
+    width: "95%",
+    maxHeight: "80%",
+    backgroundColor: "white",
+    borderRadius: 12,
+    padding: 16,
+    elevation: 10,
+  },
+
+  editCustomerHint: {
+    fontSize: 11,
+    color: "#6b7280",
+    marginBottom: 12,
+    lineHeight: 16,
+  },
+
+  editFieldContainer: {
+    marginBottom: 12,
+  },
+
+  editFieldLabel: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#374151",
+    marginBottom: 4,
+  },
+
+  editFieldRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+
+  editFieldValue: {
+    flex: 1,
+    backgroundColor: "#f9fafb",
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+
+  editFieldValueText: {
+    fontSize: 12,
+    color: "#374151",
+  },
+
+  removeFieldBtn: {
+    padding: 8,
+    backgroundColor: "#fef2f2",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#fecaca",
+  },
+
+  editFieldInput: {
+    borderWidth: 1,
+    borderColor: "#f97316",
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    fontSize: 12,
+    backgroundColor: "#fff",
+    color: "#111827",
+  },
+
+  oldValueText: {
+    fontSize: 10,
+    color: "#f97316",
+    marginTop: 4,
+  },
+
+  editCustomerButtons: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 12,
+  },
+
+  // Thêm vào StyleSheet
+  newCustomerCard: {
+    marginHorizontal: 10,
+    marginTop: 8,
+    backgroundColor: "#fff7ed",
+    borderRadius: 8,
+    padding: 12,
+    borderWidth: 2,
+    borderColor: "#f97316",
+    position: "relative",
+  },
+
+  newCustomerBadge: {
+    position: "absolute",
+    top: -10,
+    left: 12,
+    backgroundColor: "#f97316",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
+  },
+
+  newCustomerBadgeText: {
+    color: "#fff",
+    fontSize: 10,
+    fontWeight: "700",
+  },
+
+  oldCustomerCard: {
+    opacity: 0.6,
+    backgroundColor: "#f9fafb",
+  },
+
+  oldText: {
+    color: "#9ca3af",
+  },
+
+  oldLink: {
+    color: "#9ca3af",
+  },
+
+  dividerContainer: {
+    marginHorizontal: 10,
+    marginTop: 6,
+    marginBottom: 2,
+    position: "relative",
+    alignItems: "center",
+    justifyContent: "center",
+    height: 20,
+  },
+
+  dividerLine: {
+    position: "absolute",
+    top: "50%",
+    left: 0,
+    right: 0,
+    borderTopWidth: 1.5,
+    borderTopColor: "#d1d5db",
+    borderStyle: "dashed",
+  },
+
+  dividerLabelContainer: {
+    backgroundColor: "#f3f4f6",
+    paddingHorizontal: 12,
+    paddingVertical: 2,
+    borderRadius: 4,
+    zIndex: 1,
+  },
+
+  dividerLabel: {
+    fontSize: 9,
+    color: "#9ca3af",
+    fontWeight: "500",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  editInputWrapper: {
+    position: "relative",
+  },
+
+  editInput: {
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingRight: 36,
+    paddingVertical: 10,
+    fontSize: 13,
+    backgroundColor: "#fff",
+    color: "#111827",
+  },
+
+  editInputMultiline: {
+    minHeight: 70,
+    textAlignVertical: "top",
+    paddingTop: 10,
+  },
+
+  editInputError: {
+    borderColor: "#ef4444",
+  },
+
+  editInputClearBtn: {
+    position: "absolute",
+    right: 8,
+    top: 10,
+    padding: 2,
+  },
+
+  editInputClearBtnMultiline: {
+    position: "absolute",
+    right: 8,
+    top: 10,
+    padding: 2,
+  },
+
+  editErrorText: {
+    fontSize: 11,
+    color: "#ef4444",
+    marginTop: 4,
+  },
+  quickReasonsLabel: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#6b7280",
+    marginTop: 12,
+    marginBottom: 8,
+  },
+
+  quickReasonsContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+    marginBottom: 4,
+  },
+
+  quickReasonChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: "#f3f4f6",
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+  },
+
+  quickReasonChipActive: {
+    backgroundColor: "#dc2626",
+    borderColor: "#dc2626",
+  },
+
+  quickReasonText: {
+    fontSize: 11,
+    color: "#374151",
+    fontWeight: "500",
+  },
+
+  quickReasonTextActive: {
+    color: "#fff",
+    fontWeight: "600",
   },
 });

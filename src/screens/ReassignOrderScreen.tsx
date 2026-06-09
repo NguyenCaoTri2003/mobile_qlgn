@@ -60,7 +60,7 @@ export default function ReassignOrderScreen() {
   const [isDateTimeValid, setIsDateTimeValid] = useState(true);
 
   useEffect(() => {
-    if (user?.role === "QL") {
+    if (user?.role === "QL" || user?.role === "SUPERADMIN") {
       fetchShippers();
     }
   }, [user?.role]);

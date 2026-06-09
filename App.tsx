@@ -360,9 +360,17 @@
 //     </>
 //   );
 // }
-import 'react-native-gesture-handler';
+import "react-native-gesture-handler";
 import React, { useState, useEffect, useCallback } from "react";
-import { AppState, Platform, View } from "react-native";
+import {
+  ActivityIndicator,
+  AppState,
+  Platform,
+  View,
+  Text,
+  StyleSheet,
+  Image
+} from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -470,16 +478,45 @@ const toastConfig = {
 
 function RootNavigator() {
   const { user, loading } = useAuth();
-  const { permissionStatus } = useLocationPermission();
+  const [dots, setDots] = useState("");
+  // const { permissionStatus } = useLocationPermission();
 
-  if (loading || permissionStatus === "checking") return null;
+  // if (loading || permissionStatus === "checking") return null;
 
-  // Chỉ cho phép vào app khi đã có quyền "Luôn luôn"
-  if (permissionStatus !== "granted_always") {
+  // // Chỉ cho phép vào app khi đã có quyền "Luôn luôn"
+  // if (permissionStatus !== "granted_always") {
+  //   return (
+  //     <Stack.Navigator screenOptions={{ headerShown: false }}>
+  //       <Stack.Screen name="Empty" component={View} />
+  //     </Stack.Navigator>
+  //   );
+  // }
+
+  if (loading) {
     return (
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="Empty" component={View} />
-      </Stack.Navigator>
+      <View style={styles.loadingContainer}>
+        <View style={styles.contentWrapper}>
+          {/* Simple icon */}
+          <View style={styles.iconBox}>
+            <Image
+              source={require("./assets/images/logo/logo.png")}
+              style={styles.logoImage}
+              resizeMode="contain"
+            />
+          </View>
+
+          {/* App name */}
+          <Text style={styles.title}>Nhị Gia Logistics</Text>
+          <Text style={styles.subtitle}>Đang khởi động{dots}</Text>
+
+          {/* Dots indicator */}
+          <View style={styles.dotsContainer}>
+            <View style={[styles.dot, styles.dot1]} />
+            <View style={[styles.dot, styles.dot2]} />
+            <View style={[styles.dot, styles.dot3]} />
+          </View>
+        </View>
+      </View>
     );
   }
 
@@ -502,7 +539,7 @@ const Stack = createNativeStackNavigator();
 function AppContent() {
   const [isConnected, setIsConnected] = useState(true);
   const [isChecking, setIsChecking] = useState(false);
-  const { permissionStatus } = useLocationPermission(); // Thêm dòng này
+  // const { permissionStatus } = useLocationPermission(); // Thêm dòng này
 
   useEffect(() => {
     if (Platform.OS === "android") {
@@ -517,18 +554,18 @@ function AppContent() {
     }
   }, []);
 
-  useEffect(() => {
-    // Chỉ bắt đầu tracking khi đã có quyền "always"
-    if (permissionStatus === "granted_always") {
-      const restoreTracking = async () => {
-        const orderId = await AsyncStorage.getItem("tracking_order_id");
-        if (orderId) {
-          await startTracking(Number(orderId));
-        }
-      };
-      restoreTracking();
-    }
-  }, [permissionStatus]);
+  // useEffect(() => {
+  //   // Chỉ bắt đầu tracking khi đã có quyền "always"
+  //   if (permissionStatus === "granted_always") {
+  //     const restoreTracking = async () => {
+  //       const orderId = await AsyncStorage.getItem("tracking_order_id");
+  //       if (orderId) {
+  //         await startTracking(Number(orderId));
+  //       }
+  //     };
+  //     restoreTracking();
+  //   }
+  // }, [permissionStatus]);
 
   useEffect(() => {
     const unsubscribe = NetInfo.addEventListener((state) => {
@@ -559,7 +596,6 @@ function AppContent() {
             <OrderProvider>
               <NotificationProvider>
                 <NavigationContainer ref={navigationRef}>
-
                   <RootNavigator />
                 </NavigationContainer>
               </NotificationProvider>
@@ -570,7 +606,7 @@ function AppContent() {
 
       <Toast config={toastConfig} />
 
-      <LocationPermissionModal />
+      {/* <LocationPermissionModal /> */}
 
       {/* No Internet Modal */}
       <NoInternetScreen
@@ -584,8 +620,79 @@ function AppContent() {
 
 export default function App() {
   return (
-    <LocationPermissionProvider>
-      <AppContent />
-    </LocationPermissionProvider>
+    // <LocationPermissionProvider>
+    <AppContent />
+    // </LocationPermissionProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    paddingHorizontal: 40,
+  },
+  contentWrapper: {
+    alignItems: "center",
+  },
+  iconBox: {
+    // width: 80,
+    // height: 80,
+    // borderRadius: 24,
+    // backgroundColor: "#f0f4fd",
+    // justifyContent: "center",
+    // alignItems: "center",
+    // marginBottom: 24,
+    // shadowColor: "#000",
+    // shadowOffset: { width: 0, height: 2 },
+    // shadowOpacity: 0.05,
+    // shadowRadius: 8,
+    // elevation: 3,
+  },
+  emoji: {
+    fontSize: 40,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: "700",
+    color: "#111827",
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: "#6B7280",
+    marginBottom: 32,
+  },
+  dotsContainer: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#304df0",
+    opacity: 0.3,
+  },
+  dot1: {
+    opacity: 0.3,
+  },
+  dot2: {
+    opacity: 0.6,
+  },
+  dot3: {
+    opacity: 1,
+  },
+  version: {
+    position: "absolute",
+    bottom: 50,
+    fontSize: 12,
+    color: "#D1D5DB",
+  },
+  logoImage: {
+    width: 50,
+    height: 50,
+  },
+});

@@ -250,7 +250,7 @@ export default function ActivityLogScreen() {
 
         {item.details && (
           <View style={styles.detailBox}>
-            <Text style={styles.detailText} numberOfLines={2}>
+            <Text style={styles.detailText}>
               {item.details}
             </Text>
           </View>

@@ -84,7 +84,7 @@ export default function OrderListScreen({ navigation, route }: any) {
   const [showFilters, setShowFilters] = useState(false);
 
   const [selectedOrders, setSelectedOrders] = useState<number[]>([]);
-  const isQL = user?.role === "QL";
+  const isQL = user?.role === "QL" || user?.role === "SUPERADMIN";
 
   const isMyOrder = filter === "MY_ORDERS_TODAY" || filter === "MY_ORDERS_ALL";
 
@@ -111,7 +111,6 @@ export default function OrderListScreen({ navigation, route }: any) {
     timeFilter: "",
     statusFilter: [] as string[],
     orderTypeFilter: "",
-
   });
 
   useEffect(() => {
@@ -292,7 +291,7 @@ export default function OrderListScreen({ navigation, route }: any) {
   };
 
   useEffect(() => {
-    if (user?.role === "QL") {
+    if (user?.role === "QL" || user?.role === "SUPERADMIN") {
       fetchShippers();
     }
   }, [user?.role]);
@@ -383,6 +382,7 @@ export default function OrderListScreen({ navigation, route }: any) {
 
   const nvgnStatuses = [
     "ASSIGNED",
+    "ARISING",
     "PROCESSING",
     "COMPLETED",
     "FINISHED",
@@ -394,6 +394,7 @@ export default function OrderListScreen({ navigation, route }: any) {
     { value: "ASSIGNED", label: "Đã điều phối", color: "#1d4ed8" },
     { value: "PROCESSING", label: "Đang thực hiện", color: "#a16207" },
     { value: "SUPPLEMENT_REQUIRED", label: "Cần bổ sung", color: "#c2410c" },
+    { value: "SUPPLEMENT_REQUIRED", label: "Phát sinh", color: "#c2410c" },
     {
       value: "RETURNED_CUSTOMER",
       label: "Hoàn đơn (Khách hàng)",
@@ -441,6 +442,15 @@ export default function OrderListScreen({ navigation, route }: any) {
         baseTabs.find((t) => t.key === "PENDING_GROUP"),
         baseTabs.find((t) => t.key === "MY_ORDERS_TODAY"),
         baseTabs.find((t) => t.key === "MY_ORDERS_ALL"),
+        baseTabs.find((t) => t.key === "DONE_GROUP"),
+      ].filter(Boolean);
+    }
+
+    if (user?.role === "SUPERADMIN" || user?.role === "NVADMIN") {
+      return [
+        baseTabs.find((t) => t.key === "ALL"),
+        baseTabs.find((t) => t.key === "TODAY"),
+        baseTabs.find((t) => t.key === "PENDING_GROUP"),
         baseTabs.find((t) => t.key === "DONE_GROUP"),
       ].filter(Boolean);
     }
@@ -922,8 +932,10 @@ export default function OrderListScreen({ navigation, route }: any) {
         <View style={styles.cardHeader}>
           <View style={{ flex: 1 }}>
             <Text
-              style={[styles.orderCode, isQL && !isMyOrder && { marginLeft: 28 }]}
-
+              style={[
+                styles.orderCode,
+                isQL && !isMyOrder && { marginLeft: 28 },
+              ]}
               numberOfLines={1}
               ellipsizeMode="tail"
             >
@@ -970,19 +982,35 @@ export default function OrderListScreen({ navigation, route }: any) {
           style={[
             styles.deliveryBox,
             {
-              backgroundColor: deliveryStyle.bg,
-              borderColor: deliveryStyle.bg,
+              backgroundColor: item.timeSlot ? "#EFF6FF" : deliveryStyle.bg, // xanh dương nhạt nếu có timeSlot
+              borderColor: item.timeSlot ? "#BFDBFE" : deliveryStyle.bg, // border xanh dương nếu có timeSlot
             },
           ]}
         >
-          <Ionicons name="time-outline" size={12} color={deliveryStyle.icon} />
+          <Ionicons
+            name="time-outline"
+            size={12}
+            color={item.timeSlot ? "#3B82F6" : deliveryStyle.icon} // icon xanh dương nếu có timeSlot
+          />
 
-          <Text style={[styles.deliveryText, { color: deliveryStyle.text }]}>
-            {item.time || "Chưa có giờ"} •
+          <Text
+            style={[
+              styles.deliveryText,
+              {
+                color: item.timeSlot ? "#1D4ED8" : deliveryStyle.text, // text xanh dương đậm nếu có timeSlot
+              },
+            ]}
+          >
+            {item.timeSlot
+              ? item.timeSlot === "MORNING"
+                ? "Buổi sáng"
+                : "Buổi chiều"
+              : item.time || "Chưa có giờ"}{" "}
+            •
             {item.date === new Date().toISOString().split("T")[0]
               ? " Hôm nay"
               : formatDate(item.date)}
-            {deliveryStatus && (
+            {!item.timeSlot && deliveryStatus && (
               <Text style={{ color: deliveryStyle.text }}>
                 {" "}
                 • {deliveryStatus}
@@ -995,15 +1023,15 @@ export default function OrderListScreen({ navigation, route }: any) {
         <View style={styles.row}>
           <Ionicons name="location-outline" size={12} color="#6b7280" />
           <Text style={styles.address} numberOfLines={2}>
-            {item.address || "Không có địa chỉ"}
+            {item.addressNew ||item.address || "Không có địa chỉ"}
           </Text>
         </View>
 
         <View style={styles.rowContact}>
           <Ionicons name="person-outline" size={12} color="#6b7280" />
           <Text style={styles.address} numberOfLines={2}>
-            {item.contact || "Không có người liên hệ"}{" "}
-            {item.phone ? ` - ${item.phone}` : ""}
+            {item.contactNew || item.contact || "Không có người liên hệ"}{" "}
+            {item.phoneNew || item.phone ? ` - ${item.phone}` : ""}
           </Text>
         </View>
 
@@ -1252,56 +1280,87 @@ export default function OrderListScreen({ navigation, route }: any) {
 
           const getTabStyle = () => {
             const baseStyle = {
-              backgroundColor: '#F3F4F6', 
+              backgroundColor: "#F3F4F6",
               borderWidth: 1,
-              borderColor: '#E5E7EB',
+              borderColor: "#E5E7EB",
             };
             const activeStyle = {
-              borderWidth: 0,       
+              borderWidth: 0,
               shadowColor: "transparent",
               elevation: 0,
             };
 
             switch (tab.key) {
-              case 'ALL':
+              case "ALL":
                 return isActive
-                  ? { ...activeStyle, backgroundColor: '#7C3AED' } 
-                  : { ...baseStyle, backgroundColor: '#F5F3FF', borderColor: '#DDD6FE' }; 
-              case 'TODAY':
+                  ? { ...activeStyle, backgroundColor: "#7C3AED" }
+                  : {
+                      ...baseStyle,
+                      backgroundColor: "#F5F3FF",
+                      borderColor: "#DDD6FE",
+                    };
+              case "TODAY":
                 return isActive
-                  ? { ...activeStyle, backgroundColor: '#2563EB' } 
-                  : { ...baseStyle, backgroundColor: '#EFF6FF', borderColor: '#BFDBFE' }; 
-              case 'PENDING_GROUP':
+                  ? { ...activeStyle, backgroundColor: "#2563EB" }
+                  : {
+                      ...baseStyle,
+                      backgroundColor: "#EFF6FF",
+                      borderColor: "#BFDBFE",
+                    };
+              case "PENDING_GROUP":
                 return isActive
-                  ? { ...activeStyle, backgroundColor: '#EA580C' } 
-                  : { ...baseStyle, backgroundColor: '#FFF7ED', borderColor: '#FED7AA' }; 
-              case 'DONE_GROUP':
+                  ? { ...activeStyle, backgroundColor: "#EA580C" }
+                  : {
+                      ...baseStyle,
+                      backgroundColor: "#FFF7ED",
+                      borderColor: "#FED7AA",
+                    };
+              case "DONE_GROUP":
                 return isActive
-                  ? { ...activeStyle, backgroundColor: '#059669' } 
-                  : { ...baseStyle, backgroundColor: '#ECFDF5', borderColor: '#A7F3D0' }; 
-              case 'MY_ORDERS_TODAY':
+                  ? { ...activeStyle, backgroundColor: "#059669" }
+                  : {
+                      ...baseStyle,
+                      backgroundColor: "#ECFDF5",
+                      borderColor: "#A7F3D0",
+                    };
+              case "MY_ORDERS_TODAY":
                 return isActive
-                  ? { ...activeStyle, backgroundColor: '#0891B2' } 
-                  : { ...baseStyle, backgroundColor: '#F0FDFA', borderColor: '#99F6E4' };
-              case 'MY_ORDERS_ALL':
+                  ? { ...activeStyle, backgroundColor: "#0891B2" }
+                  : {
+                      ...baseStyle,
+                      backgroundColor: "#F0FDFA",
+                      borderColor: "#99F6E4",
+                    };
+              case "MY_ORDERS_ALL":
                 return isActive
-                  ? { ...activeStyle, backgroundColor: '#D97706' } // Vàng nâu đậm
-                  : { ...baseStyle, backgroundColor: '#FFFBEB', borderColor: '#FDE68A' }; 
+                  ? { ...activeStyle, backgroundColor: "#D97706" } // Vàng nâu đậm
+                  : {
+                      ...baseStyle,
+                      backgroundColor: "#FFFBEB",
+                      borderColor: "#FDE68A",
+                    };
               default:
                 return baseStyle;
             }
           };
 
           const getTabTextStyle = () => {
-            if (isActive) return styles.tabTextActive; 
+            if (isActive) return styles.tabTextActive;
             switch (tab.key) {
-              case 'ALL': return { color: '#6D28D9' };
-              case 'TODAY': return { color: '#1D4ED8' };
-              case 'PENDING_GROUP': return { color: '#C2410C' };
-              case 'DONE_GROUP': return { color: '#047857' };
-              case 'MY_ORDERS_TODAY': return { color: '#0E7490' };
-              case 'MY_ORDERS_ALL': return { color: '#B45309' };
-              default: return { color: '#374151' };
+              case "ALL":
+                return { color: "#6D28D9" };
+              case "TODAY":
+                return { color: "#1D4ED8" };
+              case "PENDING_GROUP":
+                return { color: "#C2410C" };
+              case "DONE_GROUP":
+                return { color: "#047857" };
+              case "MY_ORDERS_TODAY":
+                return { color: "#0E7490" };
+              case "MY_ORDERS_ALL":
+                return { color: "#B45309" };
+              default:
+                return { color: "#374151" };
             }
           };
 
@@ -1310,8 +1369,8 @@ export default function OrderListScreen({ navigation, route }: any) {
               key={tab.key}
               style={[
                 styles.tab,
-                getTabStyle(), 
-                // isActive && styles.tabActive, 
+                getTabStyle(),
+                // isActive && styles.tabActive,
               ]}
               onPress={() => setFilter(tab.key)}
               activeOpacity={0.7}
@@ -1319,7 +1378,6 @@ export default function OrderListScreen({ navigation, route }: any) {
               <Text style={[styles.tabText, getTabTextStyle()]}>
                 {tab.label}
               </Text>
-
             </TouchableOpacity>
           );
         })}
@@ -1428,7 +1486,7 @@ export default function OrderListScreen({ navigation, route }: any) {
         </View>
       )}
 
-      {isQL && getSelectedCount() > 0 && (
+      {/* {isQL && getSelectedCount() > 0 && (
         <TouchableOpacity
           style={styles.assignButton}
           onPress={() => setShowAssignModal(true)}
@@ -1437,6 +1495,32 @@ export default function OrderListScreen({ navigation, route }: any) {
             Phân công ({getSelectedCount()})
           </Text>
         </TouchableOpacity>
+      )} */}
+      {isQL && getSelectedCount() > 0 ? (
+        <TouchableOpacity
+          style={styles.assignButton}
+          onPress={() => setShowAssignModal(true)}
+        >
+          <Text style={styles.assignText}>
+            Phân công ({getSelectedCount()})
+          </Text>
+        </TouchableOpacity>
+      ) : (
+        (user?.role === "NVADMIN" || user?.role === "SUPERADMIN") && (
+          <TouchableOpacity
+            style={[
+              styles.addButton,
+              {
+                backgroundColor: "#22C55E",
+                justifyContent: "center",
+                alignItems: "center",
+              },
+            ]}
+            onPress={() => navigation.navigate("OrderForm")}
+          >
+            <Ionicons name="add" size={24} color="#fff" />
+          </TouchableOpacity>
+        )
       )}
 
       <Modal visible={showAssignModal} transparent animationType="fade">
@@ -2633,10 +2717,17 @@ const styles = StyleSheet.create({
     gap: 6,
   },
 
-  // applyText: {
-  //   color: "#FFFFFF",
-  //   fontSize: 15,
-  //   fontWeight: "700",
-  //   letterSpacing: 0.3,
-  // },
+  addButton: {
+    position: "absolute",
+    bottom: 20,
+    right: 20,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    shadowColor: "#3B82F6",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
 });
